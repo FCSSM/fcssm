@@ -44,11 +44,22 @@ jobs:
           echo "keyAlias=$KEY_ALIAS" >> android/key.properties
           echo "storeFile=../upload-keystore.jks" >> android/key.properties
 
+      - name: Déterminer la version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Construire l'APK
-        run: flutter build apk --release
+        run: flutter build apk --release \
+          --build-name "${{ steps.version.outputs.version }}" \
+          --build-number "${{ github.run_number }}"
 
       - name: Construire l'AAB
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release \
+          --build-name "${{ steps.version.outputs.version }}" \
+          --build-number "${{ github.run_number }}"
+
 
       - name: Créer la Release GitHub
         uses: softprops/action-gh-release@v2
