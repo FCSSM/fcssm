@@ -55,8 +55,8 @@ class _PlanningPageState extends State<PlanningPage> {
 
 
 
-  Color couleurMatch(String couleur_match) {
-    switch (couleur_match) {
+  Color couleurMatch(String couleurMatch) {
+    switch (couleurMatch) {
       case "jaune":
         return Colors.yellow.shade200;
 
@@ -155,54 +155,6 @@ class _PlanningPageState extends State<PlanningPage> {
       debugPrintStack(stackTrace: stackTrace);
     }
   }
- /* Future<void> chargerPlanning(int semaine) async {
-    try {
-      // Lecture du fichier JSON
-      final String jsonString =
-      await rootBundle.loadString('assets/planning.json');
-
-      final List<Match> tousLesMatchs =
-      (jsonDecode(jsonString) as List)
-          .cast<Map<String, dynamic>>()
-          .map(Match.fromJson)
-          .toList();
-
-
-      // Filtre sur la semaine
-      setState(() {
-
-        matchsSemaine = tousLesMatchs.where((match) {
-          // Filtre sur la semaine
-          if (match.noSemaine != semaine) {
-            return false;
-          }
-
-          // Si le filtre est activé, ne garder que les matchs à domicile
-          if (uniquementDomicile && !match.estDomicile) {
-            return false;
-          }
-
-          return true;
-        }).toList();
-
-        matchsSemaine.sort((a, b) {
-          final cmp = a.date.compareTo(b.date);
-
-          if (cmp != 0) return cmp;
-
-          return a.heureEnMinutes.compareTo(b.heureEnMinutes);
-        });
-
-
-      });
-
-      //print("Nombre de matchs : ${matchsSemaine.length}");
-    } catch (e, stackTrace) {
-      print(e);
-      print(stackTrace);
-    }
-  }
-*/
 
 
   @override

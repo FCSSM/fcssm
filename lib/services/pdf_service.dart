@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/match.dart';
 
@@ -35,7 +36,7 @@ class PdfService {
 
       return _logo;
     } catch (e) {
-      print('PDF : impossible de charger le logo : $e');
+      debugPrint('PDF : impossible de charger le logo : $e');
       return null;
     }
   }
@@ -77,7 +78,7 @@ class PdfService {
   }) async {
     final chrono = Stopwatch()..start();
 
-    print('PDF : début génération');
+    debugPrint('PDF : début génération');
 
     // ----------------------------------------------------------
     // Ressources
@@ -87,7 +88,7 @@ class PdfService {
 
     await _chargerPolices();
 
-    print(
+    debugPrint(
       'PDF : ressources chargées en '
           '${chrono.elapsedMilliseconds} ms',
     );
@@ -206,7 +207,7 @@ class PdfService {
       ),
     );
 
-    print(
+    debugPrint(
       'PDF : document construit en '
           '${chrono.elapsedMilliseconds} ms',
     );
@@ -217,12 +218,12 @@ class PdfService {
 
     final bytes = await pdf.save();
 
-    print(
+    debugPrint(
       'PDF : pdf.save() terminé en '
           '${chrono.elapsedMilliseconds} ms',
     );
 
-    print(
+    debugPrint(
       'PDF : taille = '
           '${(bytes.length / 1024).toStringAsFixed(1)} Ko',
     );
