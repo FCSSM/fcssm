@@ -168,33 +168,49 @@ class _PlanningPageState extends State<PlanningPage> {
             fit: BoxFit.contain,
           ),
         ),
-        title: Text("Planning - Semaine $semaineSelectionnee"),
-        actions: [
-          Row(
-            children: [
-              Text(
-                uniquementDomicile
-                    ? "🏠 Domicile"
-                    : "🏠 Tous",
-              ),
-              Switch(
-                value: uniquementDomicile,
-                onChanged: (value) {
 
-                  setState(() {
-                    uniquementDomicile = value;
-                  });
-                  chargerPlanning(semaineSelectionnee);
-                },
-              ),
-            ],
+        title: Text(
+          "Planning - Semaine $semaineSelectionnee",
+          overflow: TextOverflow.ellipsis,
+        ),
+
+        // Deuxième ligne
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(55),
+          child: SizedBox(
+            height: 55,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  uniquementDomicile
+                      ? "🏠 Domicile"
+                      : "🏠 Tous",
+                ),
+
+                Switch(
+                  value: uniquementDomicile,
+                  onChanged: (value) {
+                    setState(() {
+                      uniquementDomicile = value;
+                    });
+                    chargerPlanning(semaineSelectionnee);
+                  },
+                ),
+
+                const SizedBox(width: 20),
+
+                IconButton(
+                  icon: const Icon(Icons.calendar_month),
+                  tooltip: "Choisir une date",
+                  onPressed: choisirDate,
+                ),
+
+                const Text("Choisir une date"),
+              ],
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.calendar_month),
-            tooltip: "Choisir une date",
-            onPressed: choisirDate,
-          ),
-        ],
+        ),
       ),
       body: matchsSemaine.isEmpty
           ? const Center(
