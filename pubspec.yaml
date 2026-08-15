@@ -81,6 +81,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
       - assets/planning.json
+      - assets/planning_entrainement.json
       - assets/images/logo_club.png
       - assets/fonts/NotoSans-Regular.ttf
       - assets/fonts/NotoSans-Bold.ttf

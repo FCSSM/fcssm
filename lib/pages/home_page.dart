@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'planning_page.dart';
 import 'impression_page.dart';
+import 'planning_entrainement_page.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -16,6 +17,7 @@ class _HomePageState extends State<HomePage> {
 
   final pages = const [
     PlanningPage(),
+    PlanningEntrainementPage(),
     ImpressionPage(),
   ];
 
@@ -40,7 +42,12 @@ class _HomePageState extends State<HomePage> {
 
           NavigationDestination(
             icon: Icon(Icons.calendar_month),
-            label: "Planning",
+            label: "Matchs",
+          ),
+
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month),
+            label: "Entraînements",
           ),
 
           NavigationDestination(

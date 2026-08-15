@@ -168,7 +168,7 @@ class _PlanningPageState extends State<PlanningPage> {
             fit: BoxFit.contain,
           ),
         ),
-        title: Text("FCSSM Planning - Semaine $semaineSelectionnee"),
+        title: Text("Planning - Semaine $semaineSelectionnee"),
         actions: [
           Row(
             children: [
