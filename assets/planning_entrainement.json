@@ -1,0 +1,47 @@
+{
+  "SAINT SATURNIN": {
+    "LUNDI": {
+      "U8 U9": "18H15-19H30",
+      "U10 U11": "18H30-19H45"
+    },
+    "MARDI": {
+      "U16 U17": "19H00-20H30"
+    },
+    "MERCREDI": {
+      "U12 U13": "17H30-19H00",
+      "SENIORS": "19H30-21H00"
+    },
+    "JEUDI": {
+      "U16 U17": "19H00-20H30"
+    },
+    "VENDREDI": {
+      "U12 U13": "18H00-19H30",
+	  "SENIORS": "19H30-21H00"
+    }
+  },
+  "SAINT SATURNIN SYNTHETIQUE": {
+    "MERCREDI": {
+      "U6 U7": "10H30-11H45",
+      "U8 U9": "13H30-15H00",
+      "U10 U11": "15H30-17H00"
+    },
+    "SAMEDI": {
+      "BABY": "11H00-12H00"
+    }
+  },
+  "LA MILESSE": {
+    "LUNDI": {
+      "U13 F": "18H15-19H30"
+    },
+    "MERCREDI": {
+      "U13 F": "17H15-18H45",
+      "U14 U15": "19H00-20H30"
+    },
+    "JEUDI": {
+      "VETERANS": "20H00-21H30"
+    },
+    "VENDREDI": {
+      "U14 U15": "18H15-19H45"
+    }
+  }
+}
