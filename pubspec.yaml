@@ -41,11 +41,20 @@ dependencies:
   syncfusion_flutter_xlsio: ^34.1.32
   web: ^1.1.1
   share_plus: ^13.3.0
+  flutter_launcher_icons: ^0.14.4
 
   flutter_localizations:
     sdk: flutter
   http: ^1.6.0
   shared_preferences: ^2.5.5
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/fcssm.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/fcssm.png"
+
 
 dev_dependencies:
   flutter_test:
