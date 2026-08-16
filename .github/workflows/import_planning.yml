@@ -13,12 +13,65 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Test import planning
+
+      - name: Afficher les informations reçues
+        env:
+          VERSION: ${{ github.event.client_payload.version }}
+          PLANNING_BASE64: ${{ github.event.client_payload.planning }}
         run: |
           echo "======================================"
           echo "IMPORT PLANNING REÇU"
           echo "======================================"
-          echo "Event type : ${{ github.event.action }}"
-          echo "Repository : ${{ github.repository }}"
-          echo "Date       : $(date)"
+          echo "Version : $VERSION"
+          echo "Taille Base64 : ${#PLANNING_BASE64} caractères"
           echo "======================================"
+
+      - name: Décoder le planning
+        env:
+          PLANNING_BASE64: ${{ github.event.client_payload.planning }}
+        run: |
+          echo "$PLANNING_BASE64" | base64 --decode | gzip -d > planning.json
+
+          echo "Planning décompressé avec succès."
+          echo "Taille planning.json : $(wc -c < planning.json) octets"
+
+      - name: Vérifier que le JSON est valide
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("planning.json", "r", encoding="utf-8") as f:
+              planning = json.load(f)
+
+          if not isinstance(planning, list):
+              raise Exception("Le JSON n'est pas une liste de matchs.")
+
+          print(f"JSON valide.")
+          print(f"Nombre de matchs : {len(planning)}")
+          PY
+
+      - name: Afficher le premier match
+        run: |
+          python3 - <<'PY'
+          import json
+
+          with open("planning.json", "r", encoding="utf-8") as f:
+              planning = json.load(f)
+
+          if planning:
+              print("Premier match reçu :")
+              print(json.dumps(
+                  planning[0],
+                  indent=2,
+                  ensure_ascii=False
+              ))
+          else:
+              print("Aucun match.")
+          PY
+
+      - name: Test terminé
+        run: |
+          echo "======================================"
+          echo "✓ TEST IMPORT TERMINÉ AVEC SUCCÈS"
+          echo "======================================"
+          echo "Aucun fichier GitHub n'a été modifié."
