@@ -1,0 +1,24 @@
+name: Import planning
+
+on:
+  repository_dispatch:
+    types:
+      - import_planning
+
+permissions:
+  contents: write
+
+jobs:
+  test-import:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test import planning
+        run: |
+          echo "======================================"
+          echo "IMPORT PLANNING REÇU"
+          echo "======================================"
+          echo "Event type : ${{ github.event.action }}"
+          echo "Repository : ${{ github.repository }}"
+          echo "Date       : $(date)"
+          echo "======================================"
