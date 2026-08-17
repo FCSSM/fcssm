@@ -14,11 +14,11 @@ class PlanningService {
 
   /// URL du planning sur GitHub.
   static const String _planningUrl =
-      'https://raw.githubusercontent.com/yannm72/planning-fcssm//main/planning.json';
+      'https://raw.githubusercontent.com/fcssm/planning-fcssm//main/planning.json';
 
   /// URL du fichier indiquant la version du planning.
   static const String _versionUrl =
-      'https://raw.githubusercontent.com/yannm72/planning-fcssm//main/planning_version.json';
+      'https://raw.githubusercontent.com/fcssm/planning-fcssm//main/planning_version.json';
 
   /// Asset embarqué dans l'application.
   static const String _assetPath = 'assets/planning.json';
