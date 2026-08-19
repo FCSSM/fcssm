@@ -84,7 +84,7 @@ class _ImpressionPageState extends State<ImpressionPage> {
   // EQUIPES
   // --------------------------------------------------
 
-  List<Match> tousLesMatchs = [];
+  List<MatchFoot> tousLesMatchs = [];
 
   Set<String> equipesSelectionnees = {};
 
@@ -103,7 +103,7 @@ class _ImpressionPageState extends State<ImpressionPage> {
       ..sort();
   }
 
-  List<Match> get matchsFiltres {
+  List<MatchFoot> get matchsFiltres {
     final matchs = tousLesMatchs.where((match) {
 
       final date = convertirDate(match.dateMatch);
@@ -252,10 +252,10 @@ class _ImpressionPageState extends State<ImpressionPage> {
       final String jsonString =
       await PlanningService.loadPlanning();
 
-      final List<Match> matchs =
+      final List<MatchFoot> matchs =
       (jsonDecode(jsonString) as List)
           .cast<Map<String, dynamic>>()
-          .map(Match.fromJson)
+          .map(MatchFoot.fromJson)
           .toList();
 
       setState(() {

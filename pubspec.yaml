@@ -86,7 +86,9 @@ flutter:
   assets:
       - assets/planning.json
       - assets/planning_entrainement.json
+      - assets/competition_mapping.json
       - assets/images/logo_club.png
+      - assets/data/terrain.json
       - assets/fonts/NotoSans-Regular.ttf
       - assets/fonts/NotoSans-Bold.ttf
   #   - images/a_dot_ham.jpeg

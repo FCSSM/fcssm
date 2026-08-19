@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:week_number/iso.dart';
 import 'package:excel_community/excel_community.dart';
@@ -52,18 +53,44 @@ class ExcelImportService {
         '${minute.toString().padLeft(2, '0')}';
   }
 
+  static Map<String, String>? _competitionMapping;
+
+  static Future<void> _chargerCorrespondanceCompetitions() async {
+    // Déjà chargé : on ne relit pas le fichier.
+    if (_competitionMapping != null) {
+      return;
+    }
+
+    final jsonString = await rootBundle.loadString(
+      'assets/competition_mapping.json',
+    );
+
+    final Map<String, dynamic> data = jsonDecode(jsonString);
+
+    _competitionMapping = data.map(
+          (key, value) => MapEntry(
+        key,
+        value.toString(),
+      ),
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Transformation de toutes les lignes Excel
   //
   // La première ligne (index 0) contient les en-têtes.
   // Les données commencent donc à l'index 1.
   // ---------------------------------------------------------------------------
-
-  static ExcelImportResult convertirToutesLesLignes(
-      List<List<dynamic>> lignes,
-      ) {
-    final List<Map<String, dynamic>> matchs = [];
+static Future<ExcelImportResult> convertirToutesLesLignes(
+List<List<dynamic>> lignes,
+) async {
+//  static ExcelImportResult convertirToutesLesLignes(
+//      List<List<dynamic>> lignes,
+ //     ) {
+  await _chargerCorrespondanceCompetitions();
+   final List<Map<String, dynamic>> matchs = [];
     final List<ExcelImportError> erreurs = [];
+
 
     for (int i = 1; i < lignes.length; i++) {
       final ligne = lignes[i];
@@ -161,7 +188,7 @@ class ExcelImportService {
 
       'ville': localite,
 
-      'competition': competition,
+      'competition': _convertirCompetition(competition,),
 
       'no_semaine': _calculerNumeroSemaine(
         dateMatch,
@@ -540,6 +567,11 @@ class ExcelImportService {
     return dateTime.weekNumber;
   }
 
+  static String _convertirCompetition(String competition) {
+    return _competitionMapping?[competition] ?? competition;
+  }
+
+
   // ---------------------------------------------------------------------------
   // Génération du JSON
   // ---------------------------------------------------------------------------
@@ -804,6 +836,8 @@ class ExcelImportService {
       'version': version,
     });
   }
+
+
 
   static String genererVersionProvisoire() {
     final maintenant = DateTime.now();

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 
 class GithubService {
@@ -11,6 +12,55 @@ static const String _repository = 'planning-fcssm';
 
 // Version de l'API GitHub utilisée.
 static const String _apiVersion = '2026-03-10';
+
+
+  static Future<String?> recupererVersion() async {
+    final response = await http.get(
+      Uri.parse(
+        'https://api.github.com/repos/'
+            'fcssm/planning-fcssm/contents/planning_version.json',
+          /// URL du fichier indiquant la version du planning.
+      //   static const String _versionUrl =
+       //   'https://raw.githubusercontent.com/fcssm/planning-fcssm//main/planning_version.json';
+
+      ),
+      headers: {
+        'Accept':
+        'application/vnd.github+json',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      debugPrint(
+        'Erreur récupération version GitHub : '
+            '${response.statusCode}',
+      );
+
+      return null;
+    }
+
+    final data =
+    jsonDecode(response.body)
+    as Map<String, dynamic>;
+
+    final content =
+    data['content'] as String;
+
+    final contenuDecode =
+    utf8.decode(
+      base64Decode(
+        content.replaceAll('\n', ''),
+      ),
+    );
+
+    final json =
+    jsonDecode(contenuDecode)
+    as Map<String, dynamic>;
+
+    return json['version'] as String?;
+  }
+
+
 
 // ---------------------------------------------------------------------------
 // Envoi du planning à GitHub Actions

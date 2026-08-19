@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/match.dart';
+import 'excel_import_service.dart';
+import 'github_service.dart';
 
 
 class PlanningService {
@@ -432,4 +435,116 @@ class PlanningService {
       '[PlanningService] Cache persistant supprimé.',
     );
   }
+
+  // ===========================================================================
+  // Publication du planning
+  // ===========================================================================
+
+  static String genererJson(
+      List<MatchFoot> matchs,
+      ) {
+    return jsonEncode(
+        matchs.map((match) => match.toJson()).toList(),
+    );
+  }
+
+  static Future<String> genererNouvelleVersion() async {
+    final versionActuelle =
+    await GithubService.recupererVersion();
+
+    final maintenant = DateTime.now();
+
+    final date =
+        '${maintenant.year.toString().padLeft(4, '0')}-'
+        '${maintenant.month.toString().padLeft(2, '0')}-'
+        '${maintenant.day.toString().padLeft(2, '0')}';
+
+    // ----------------------------------------------------------
+    // Aucune version existante
+    // ----------------------------------------------------------
+
+    if (versionActuelle == null ||
+        versionActuelle.isEmpty) {
+      return '$date-01';
+    }
+
+    // ----------------------------------------------------------
+    // Exemple :
+    // 2026-08-19-03
+    // ----------------------------------------------------------
+
+    final morceaux = versionActuelle.split('-');
+
+    if (morceaux.length != 4) {
+      // Format inattendu
+      return '$date-01';
+    }
+
+    final ancienneDate =
+        '${morceaux[0]}-'
+        '${morceaux[1]}-'
+        '${morceaux[2]}';
+
+    final ancienNumero =
+        int.tryParse(morceaux[3]) ?? 0;
+
+    // ----------------------------------------------------------
+    // Même jour
+    // ----------------------------------------------------------
+
+    if (ancienneDate == date) {
+      final nouveauNumero =
+          ancienNumero + 1;
+
+      return '$date-'
+          '${nouveauNumero.toString().padLeft(2, '0')}';
+    }
+
+    // ----------------------------------------------------------
+    // Nouveau jour
+    // ----------------------------------------------------------
+
+    return '$date-01';
+  }
+
+  static Future<void> publierPlanning({
+    required List<MatchFoot> listematchs,
+    required String token,
+  }) async {
+
+    // Génération JSON
+    final planningJson = genererJson(listematchs);
+
+    //debugPrint(planningJson);
+
+    // Compression
+    final resultat =
+    await ExcelImportService.mesurerTailleJson(
+      planningJson,
+    );
+
+    final planningBase64 =
+    resultat['base64'] as String;
+
+    final int tailleBase64 =
+    resultat['tailleBase64'] as int;
+
+    if (tailleBase64 >= 60000) {
+      throw Exception(
+        'Le planning est trop volumineux.',
+      );
+    }
+
+    // Version
+    final version = await genererNouvelleVersion();
+
+    // Publication
+    await GithubService.envoyerPlanning(
+      token: token,
+      version: version,
+      planningBase64: planningBase64,
+    );
+  }
+
+
 }

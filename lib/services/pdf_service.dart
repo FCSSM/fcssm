@@ -72,7 +72,7 @@ class PdfService {
   // ============================================================
 
   static Future<Uint8List> genererPdf({
-    required List<Match> matchs,
+    required List<MatchFoot> matchs,
     required String titre,
     required String sousTitre,
   }) async {
@@ -103,7 +103,7 @@ class PdfService {
     // Regroupement par jour
     // ----------------------------------------------------------
 
-    final Map<DateTime, List<Match>> matchsParJour = {};
+    final Map<DateTime, List<MatchFoot>> matchsParJour = {};
 
     for (final match in matchs) {
       final jour = DateTime(
@@ -247,7 +247,7 @@ class PdfService {
   // ============================================================
 
   static Future<void> exporterPlanning({
-    required List<Match> matchs,
+    required List<MatchFoot> matchs,
     required String titre,
     required String sousTitre,
   }) async {
@@ -415,7 +415,7 @@ class PdfService {
   // ============================================================
 
   static pw.Widget _matchCard(
-      Match match,
+      MatchFoot match,
       ) {
     final couleur =
     _couleurMatch(match);
@@ -564,7 +564,7 @@ class PdfService {
   // ============================================================
 
   static PdfColor _couleurMatch(
-      Match match,
+      MatchFoot match,
       ) {
     switch (match.couleur) {
       case 'jaune':

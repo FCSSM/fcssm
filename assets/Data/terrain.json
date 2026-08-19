@@ -1,0 +1,24 @@
+{
+  "terrains": [
+    {
+      "id": "terrain_1",
+      "nom": "STADE DANIEL LANGLAIS 1",
+      "ville": "ST SATURNIN"
+    },
+    {
+      "id": "terrain_2",
+      "nom": "STADE DANIEL LANGLAIS 2",
+      "ville": "ST SATURNIN"
+    },
+    {
+      "id": "terrain_3",
+      "nom": "STADE VALERE HUET 1",
+      "ville": "LA MILESSE"
+    },
+    {
+      "id": "terrain_4",
+      "nom": "STADE VALERE HUET 2",
+      "ville": "LA MILESSE"
+    }
+  ]
+}

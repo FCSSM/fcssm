@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 class ExcelService {
   /// Génère un fichier Excel à partir de la liste des matchs.
 static Future<Uint8List> genererExcel({
-required List<Match> matchs,
+required List<MatchFoot> matchs,
 required String criteres,
 }) async  {
     // ==========================================================
@@ -137,7 +137,7 @@ required String criteres,
     // ==========================================================
 
     for (int i = 0; i < matchs.length; i++) {
-      final Match match = matchs[i];
+      final MatchFoot match = matchs[i];
 
       final int ligne = i + 4;
 
@@ -219,7 +219,7 @@ required String criteres,
     // ==========================================================
 
     for (int i = 0; i < matchs.length; i++) {
-      final Match match = matchs[i];
+      final MatchFoot match = matchs[i];
 
       final int ligne = i + 4;
 

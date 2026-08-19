@@ -1,18 +1,18 @@
 import 'package:intl/intl.dart';
 
-class Match {
+class MatchFoot {
   final String equipeLocale;
   final String recevant;
-  final String dateMatch;
-  final String heureMatch;
+  String dateMatch;
+  String heureMatch;
   final String equipeAdverse;
-  final String stade;
+  String stade;
   final String phase;
-  final String ville;
+  String ville;
   final String competition;
   final int noSemaine;
 
-  Match({
+  MatchFoot({
     required this.equipeLocale,
     required this.recevant,
     required this.dateMatch,
@@ -25,8 +25,8 @@ class Match {
     required this.noSemaine,
   });
 
-  factory Match.fromJson(Map<String, dynamic> json) {
-    return Match(
+  factory MatchFoot.fromJson(Map<String, dynamic> json) {
+    return MatchFoot(
       equipeLocale: json['equipe_locale'],
       recevant: json['recevant'],
       dateMatch: json['date_match'],
@@ -38,6 +38,26 @@ class Match {
       competition: json['competition'],
       noSemaine: json['no_semaine'],
     );
+  }
+
+
+  // ==========================================================
+  // JSON
+  // ==========================================================
+
+  Map<String, dynamic> toJson() {
+    return {
+      'equipe_locale': equipeLocale,
+      'recevant': recevant,
+      'date_match': dateMatch,
+      'heure_match': heureMatch,
+      'equipe_adverse': equipeAdverse,
+      'stade': stade,
+      'phase': phase,
+      'ville': ville,
+      'competition': competition,
+      'no_semaine': noSemaine,
+    };
   }
 
   /// Date convertie en DateTime
