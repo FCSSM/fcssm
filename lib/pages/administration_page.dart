@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../services/admin_service.dart';
 import '../services/excel_import_service.dart';
 import '../services/github_service.dart';
+import '../services/planning_service.dart';
 
 class AdministrationPage extends StatefulWidget {
   const AdministrationPage({super.key});
@@ -815,8 +816,11 @@ resultatImport!.matchs,
       // Génération version
       // -----------------------------------------------------------------------
 
-      final version = ExcelImportService.genererVersionProvisoire();
-
+      //final version = ExcelImportService.genererVersionProvisoire();
+      final version = await PlanningService.genererNouvelleVersion();
+      if (!mounted) {
+        return;
+      }
       // -----------------------------------------------------------------------
       // Confirmation avant publication
       // -----------------------------------------------------------------------

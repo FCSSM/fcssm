@@ -15,8 +15,8 @@ class AdminService {
   static Future<void> setAdmin(bool value) async {
     final prefs = await SharedPreferences.getInstance();
 
-    await prefs.setBool('isAdmin', value);
-
+  //  await prefs.setBool('isAdmin', value);
+    await prefs.remove('isAdmin');
     debugPrint('>>> ADMIN SERVICE : sauvegarde isAdmin = $value');
   }
 }

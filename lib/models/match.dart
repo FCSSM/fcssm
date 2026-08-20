@@ -11,6 +11,7 @@ class MatchFoot {
   String ville;
   final String competition;
   final int noSemaine;
+  String? modification;
 
   MatchFoot({
     required this.equipeLocale,
@@ -23,6 +24,7 @@ class MatchFoot {
     required this.ville,
     required this.competition,
     required this.noSemaine,
+    this.modification,
   });
 
   factory MatchFoot.fromJson(Map<String, dynamic> json) {
@@ -37,6 +39,7 @@ class MatchFoot {
       ville: json['ville'],
       competition: json['competition'],
       noSemaine: json['no_semaine'],
+      modification: json['modification'],
     );
   }
 
@@ -57,6 +60,7 @@ class MatchFoot {
       'ville': ville,
       'competition': competition,
       'no_semaine': noSemaine,
+      "modification": modification,
     };
   }
 

@@ -23,6 +23,10 @@ class PlanningService {
   static const String _versionUrl =
       'https://raw.githubusercontent.com/fcssm/planning-fcssm//main/planning_version.json';
 
+
+
+
+
   /// Asset embarqué dans l'application.
   static const String _assetPath = 'assets/planning.json';
 
@@ -43,6 +47,18 @@ class PlanningService {
   /// Cela évite que planning_page.dart et impression_page.dart
   /// téléchargent chacun le planning.
   static Future<String>? _planningEnCours;
+
+
+  //Rechargement force du planning
+  static Future<String> reloadPlanning() async {
+    debugPrint(
+      '[PlanningService] Rechargement forcé du planning.',
+    );
+
+    _planningEnCours = null;
+
+    return loadPlanning();
+  }
 
   // ===========================================================================
   // API PUBLIQUE
@@ -324,14 +340,16 @@ class PlanningService {
   ///   "version": "2026-08-13-01"
   /// }
   static Future<String> _getRemoteVersion() async {
+    final uri = Uri.parse(
+      '$_versionUrl?v=${DateTime.now().millisecondsSinceEpoch}',
+    );
     final response = await http
-        .get(Uri.parse(_versionUrl))
+        .get(uri)
         .timeout(_networkTimeout);
 
     if (response.statusCode != 200) {
       throw HttpException(
         'Erreur HTTP ${response.statusCode} '
-            'pour $_versionUrl',
       );
     }
 
@@ -546,5 +564,45 @@ class PlanningService {
     );
   }
 
+  static Future<bool> verifierNouvelleVersion() async {
+    try {
+      final SharedPreferencesWithCache preferences =
+      await SharedPreferencesWithCache.create(
+        cacheOptions: const SharedPreferencesWithCacheOptions(
+          allowList: {
+            _cacheKey,
+            _versionKey,
+          },
+        ),
+      );
 
+      final String? versionLocale =
+      preferences.getString(_versionKey);
+
+      final String versionGitHub =
+      await _getRemoteVersion();
+
+      debugPrint(
+        '[PlanningService] Vérification version : '
+            'locale=$versionLocale / GitHub=$versionGitHub',
+      );
+
+      if (versionLocale == versionGitHub) {
+        return false;
+      }
+
+      debugPrint(
+        '[PlanningService] 🔄 Nouvelle version détectée : '
+            '$versionLocale → $versionGitHub',
+      );
+
+      return true;
+    } catch (e) {
+      debugPrint(
+        '[PlanningService] Erreur vérification version : $e',
+      );
+
+      return false;
+    }
+  }
 }
