@@ -1,11 +1,11 @@
 import 'package:excel_community/excel_community.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../services/admin_service.dart';
+
 import '../services/excel_import_service.dart';
-import '../services/github_service.dart';
-import '../services/planning_service.dart';
+import '../services/firestore_service.dart';
 
 class AdministrationPage extends StatefulWidget {
   const AdministrationPage({super.key});
@@ -73,7 +73,12 @@ class _AdministrationPageState extends State<AdministrationPage> {
   @override
   void initState() {
     super.initState();
-    _chargerIsAdmin();
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (!mounted) return;
+      setState(() {
+        isAdmin = user != null;
+      });
+    });
   }
 
   @override
@@ -84,15 +89,6 @@ class _AdministrationPageState extends State<AdministrationPage> {
     super.dispose();
   }
 
-  Future<void> _chargerIsAdmin() async {
-    final admin = await AdminService.isAdmin();
-
-    if (!mounted) return;
-
-    setState(() {
-      isAdmin = admin;
-    });
-  }
 
   // ---------------------------------------------------------------------------
   // Import du fichier Excel
@@ -273,34 +269,7 @@ class _AdministrationPageState extends State<AdministrationPage> {
         toutesLesLignes = lignesCompletes;
       });
 
-      // -----------------------------------------------------------------------
-      // Debug
-      // -----------------------------------------------------------------------
 
-      debugPrint('======================================');
-      debugPrint('IMPORT EXCEL');
-      debugPrint('======================================');
-
-      debugPrint('Fichier : $nomFichier');
-      debugPrint('Feuille : $nomFeuille');
-      debugPrint('Lignes : $nombreLignes');
-      debugPrint('Colonnes : $nombreColonnes');
-
-      debugPrint('');
-      debugPrint('EN-TÊTES :');
-
-      for (int i = 0; i < entetes.length; i++) {
-        debugPrint('${i + 1} : ${entetes[i]}');
-      }
-
-      debugPrint('');
-      debugPrint('PREMIÈRES LIGNES :');
-
-      for (final ligne in apercu) {
-        debugPrint(ligne.toString());
-      }
-
-      debugPrint('======================================');
     } catch (e, stackTrace) {
       debugPrint('Erreur import Excel : $e');
       debugPrintStack(stackTrace: stackTrace);
@@ -413,6 +382,7 @@ class _AdministrationPageState extends State<AdministrationPage> {
   // Afficher JSON
   // ---------------------------------------------------------------------------
 
+
   Future<void> afficherJson() async {
     if (resultatImport == null) {
       return;
@@ -428,11 +398,6 @@ class _AdministrationPageState extends State<AdministrationPage> {
       jsonBrut,
     );
 
-    /*
-final json = ExcelImportService.genererJson(
-resultatImport!.matchs,
-);
-*/
 
     await showDialog<void>(
       context: context,
@@ -520,6 +485,7 @@ resultatImport!.matchs,
   // ---------------------------------------------------------------------------
 
   Future<void> _afficherImportPrepare(
+
     String planningJson,
     String versionJson,
   ) async {
@@ -680,66 +646,16 @@ resultatImport!.matchs,
     return '${(octets / (1024 * 1024)).toStringAsFixed(2)} Mo';
   }
 
-  // ---------------------------------------------------------------------------
-  // Demander le token GitHub
-  // ---------------------------------------------------------------------------
-
-  Future<String?> demanderTokenGitHub() {
-    final controller = TextEditingController();
-
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Mise à jour GitHub'),
-          content: TextField(
-            controller: controller,
-            obscureText: true,
-            autofocus: true,
-            autocorrect: false,
-            enableSuggestions: false,
-            decoration: const InputDecoration(
-              labelText: 'Token GitHub',
-              hintText: 'github_pat_...',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-              child: const Text('Annuler'),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                final token = controller.text.trim();
-
-                if (token.isEmpty) {
-                  return;
-                }
-
-                Navigator.of(dialogContext).pop(token);
-              },
-              icon: const Icon(Icons.cloud_upload),
-              label: const Text('Mettre à jour'),
-            ),
-          ],
-        );
-      },
-    ).whenComplete(controller.dispose);
-  }
 
   // ---------------------------------------------------------------------------
-  // Publier le planning sur GitHub
-  // ---------------------------------------------------------------------------
+// Importer le planning dans Firebase
+// ---------------------------------------------------------------------------
 
-  Future<void> publierPlanningSurGitHub() async {
+  Future<void> importerPlanningDansFirebase() async {
     try {
-      // -----------------------------------------------------------------------
-      // Vérification import
-      // -----------------------------------------------------------------------
+      // -------------------------------------------------------------------------
+      // Vérification de l'analyse
+      // -------------------------------------------------------------------------
 
       if (resultatImport == null) {
         if (!mounted) {
@@ -747,15 +663,39 @@ resultatImport!.matchs,
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Aucun planning importé.')),
+          const SnackBar(
+            content: Text('Aucun planning analysé.'),
+          ),
         );
 
         return;
       }
 
-      // -----------------------------------------------------------------------
+      // -------------------------------------------------------------------------
+      // Vérification des erreurs
+      // -------------------------------------------------------------------------
+
+      if (!resultatImport!.estValide) {
+        if (!mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.orange,
+            content: Text(
+              'Le fichier contient des erreurs. '
+                  'L\'import Firebase est impossible.',
+            ),
+          ),
+        );
+
+        return;
+      }
+
+      // -------------------------------------------------------------------------
       // Vérification des matchs
-      // -----------------------------------------------------------------------
+      // -------------------------------------------------------------------------
 
       final matchs = resultatImport!.matchs;
 
@@ -764,84 +704,48 @@ resultatImport!.matchs,
           return;
         }
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Aucun match à publier.')));
-
-        return;
-      }
-
-      // -----------------------------------------------------------------------
-      // Génération JSON
-      // -----------------------------------------------------------------------
-
-      final jsonBrut = ExcelImportService.genererJson(resultatImport!.matchs);
-
-      final planningJson =
-          ExcelImportService.dedoublonnerPlanningParNumeroMatch(jsonBrut);
-
-      // -----------------------------------------------------------------------
-      // Compression GZIP + Base64
-      // -----------------------------------------------------------------------
-
-      final resultat = await ExcelImportService.mesurerTailleJson(planningJson);
-
-      if (!mounted) {
-        return;
-      }
-
-      final planningBase64 = resultat['base64'] as String;
-
-      final int tailleBase64 = resultat['tailleBase64'] as int;
-
-      // -----------------------------------------------------------------------
-      // Vérification taille
-      // -----------------------------------------------------------------------
-
-      if (tailleBase64 >= 60000) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            backgroundColor: Colors.orange,
-            content: Text(
-              'Le planning est trop volumineux pour être envoyé '
-              'directement à GitHub.',
-            ),
+            content: Text('Aucun match à importer.'),
           ),
         );
 
         return;
       }
 
-      // -----------------------------------------------------------------------
-      // Génération version
-      // -----------------------------------------------------------------------
+      // -------------------------------------------------------------------------
+      // Génération du JSON
+      // -------------------------------------------------------------------------
 
-      //final version = ExcelImportService.genererVersionProvisoire();
-      final version = await PlanningService.genererNouvelleVersion();
-      if (!mounted) {
-        return;
-      }
-      // -----------------------------------------------------------------------
-      // Confirmation avant publication
-      // -----------------------------------------------------------------------
+      final jsonBrut =
+      ExcelImportService.genererJson(matchs);
+
+      // -------------------------------------------------------------------------
+      // Dédoublonnage par numéro de match
+      // -------------------------------------------------------------------------
+
+      final planningJson =
+      ExcelImportService.dedoublonnerPlanningParNumeroMatch(
+        jsonBrut,
+      );
+
+      // -------------------------------------------------------------------------
+      // Confirmation
+      // -------------------------------------------------------------------------
 
       final confirmer = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
           return AlertDialog(
-            title: const Text('Publier le planning ?'),
-            content: SingleChildScrollView(
-              child: Text(
-                'Version : $version\n\n'
-                'Nombre de matchs : ${matchs.length}\n\n'
-                'JSON : '
-                '${resultat['tailleOriginale']} octets\n'
-                'GZIP : '
-                '${resultat['tailleCompressee']} octets\n'
-                'Base64 : '
-                '${resultat['tailleBase64']} caractères',
-              ),
+            title: const Text(
+              'Remplacer le planning Firebase ?',
+            ),
+            content: Text(
+              'Le planning actuellement présent dans Firebase '
+                  'sera entièrement supprimé puis remplacé.\n\n'
+                  'Matchs dans le fichier : ${matchs.length}\n\n'
+                  'Cette opération ne peut pas être annulée.',
             ),
             actions: [
               TextButton(
@@ -855,17 +759,16 @@ resultatImport!.matchs,
                   Navigator.of(dialogContext).pop(true);
                 },
                 icon: const Icon(Icons.cloud_upload),
-                label: const Text('Publier'),
+                label: const Text('Importer'),
               ),
             ],
           );
         },
       );
 
-      // -----------------------------------------------------------------------
-      // Le dialogue est terminé.
-      // Vérification du State avant de continuer.
-      // -----------------------------------------------------------------------
+      // -------------------------------------------------------------------------
+      // Le dialogue est terminé
+      // -------------------------------------------------------------------------
 
       if (!mounted) {
         return;
@@ -875,56 +778,56 @@ resultatImport!.matchs,
         return;
       }
 
-      // -----------------------------------------------------------------------
-      // Demande du token
-      // -----------------------------------------------------------------------
-
-      final token = await demanderTokenGitHub();
-
-      // -----------------------------------------------------------------------
-      // Le dialogue du token est terminé.
-      // -----------------------------------------------------------------------
-
-      if (!mounted) {
-        return;
-      }
-
-      if (token == null || token.trim().isEmpty) {
-        return;
-      }
-
-      // -----------------------------------------------------------------------
-      // Envoi à GitHub
-      // -----------------------------------------------------------------------
-
-      await GithubService.envoyerPlanning(
-        token: token,
-        version: version,
-        planningBase64: planningBase64,
-      );
-
-      // -----------------------------------------------------------------------
-      // Vérification après l'appel réseau
-      // -----------------------------------------------------------------------
-
-      if (!mounted) {
-        return;
-      }
-
-      // -----------------------------------------------------------------------
-      // Succès
-      // -----------------------------------------------------------------------
+      // -------------------------------------------------------------------------
+      // Message d'attente
+      // -------------------------------------------------------------------------
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          content: Text(
+            'Import du planning dans Firebase...',
+          ),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // -------------------------------------------------------------------------
+      // Remplacement complet du planning
+      // -------------------------------------------------------------------------
+
+
+      final version = await FirestoreService.incrementerVersionPlanning();
+
+      await FirestoreService.remplacerPlanning(
+        json: planningJson,
+        version: version,
+      );
+
+      // -------------------------------------------------------------------------
+      // Vérification après l'appel asynchrone
+      // -------------------------------------------------------------------------
+
+      if (!mounted) {
+        return;
+      }
+
+      // -------------------------------------------------------------------------
+      // Succès
+      // -------------------------------------------------------------------------
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
           backgroundColor: Colors.green,
-          content: Text('Planning envoyé à GitHub avec succès.'),
+          content: Text(
+            'Planning Firebase mis à jour avec succès.\n'
+                '${matchs.length} matchs importés.',
+          ),
         ),
       );
     } catch (e) {
-      // -----------------------------------------------------------------------
+      // -------------------------------------------------------------------------
       // Erreur
-      // -----------------------------------------------------------------------
+      // -------------------------------------------------------------------------
 
       if (!mounted) {
         return;
@@ -933,11 +836,15 @@ resultatImport!.matchs,
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.red,
-          content: Text('Erreur lors de la publication : $e'),
+          content: Text(
+            'Erreur lors de l\'import Firebase : $e',
+          ),
         ),
       );
     }
   }
+
+
 
   // ---------------------------------------------------------------------------
   // Build
@@ -1019,14 +926,17 @@ resultatImport!.matchs,
               ),
 
             // -----------------------------------------------------------------
-            // Publier GitHub
+            // Importer Firebase
             // -----------------------------------------------------------------
             ElevatedButton.icon(
-              onPressed: toutesLesLignes.isEmpty
+              onPressed: resultatImport == null ||
+                  !resultatImport!.estValide
                   ? null
-                  : publierPlanningSurGitHub,
+                  : importerPlanningDansFirebase,
               icon: const Icon(Icons.cloud_upload),
-              label: const Text('Publier sur GitHub'),
+              label: const Text(
+                'Remplacer le planning dans Firebase',
+              ),
             ),
 
             const SizedBox(height: 30),

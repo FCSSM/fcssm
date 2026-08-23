@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/admin_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({super.key});
@@ -25,7 +25,6 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   }
 
   Future<void> _connexion() async {
-    // Vérification des champs
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -34,42 +33,73 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       _chargement = true;
     });
 
-    final identifiant = _identifiantController.text.trim();
+    final email = _identifiantController.text.trim();
     final motDePasse = _motDePasseController.text;
 
-    // ------------------------------------------------
-    // TEMPORAIRE
-    // À remplacer plus tard par ta vraie authentification
-    // ------------------------------------------------
-    const identifiantAdmin = 'admin';
-    const motDePasseAdmin = '1234';
-
-    // Petite attente pour simuler une authentification
-    await Future.delayed(
-      const Duration(milliseconds: 300),
-    );
-
-    if (!mounted) return;
-
-    if (identifiant == identifiantAdmin &&
-        motDePasse == motDePasseAdmin) {
-      // Mémorisation de l'administrateur
-      await AdminService.setAdmin(true);
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: motDePasse,
+      );
 
       if (!mounted) return;
 
-      // Retour à la page précédente avec résultat positif
+      // Connexion réussie
       Navigator.pop(context, true);
-    } else {
+
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      String message;
+
+      switch (e.code) {
+        case 'invalid-credential':
+          message = 'Adresse e-mail ou mot de passe incorrect';
+          break;
+
+        case 'user-not-found':
+          message = 'Aucun compte associé à cette adresse e-mail';
+          break;
+
+        case 'wrong-password':
+          message = 'Mot de passe incorrect';
+          break;
+
+        case 'too-many-requests':
+          message =
+          'Trop de tentatives. Veuillez réessayer plus tard';
+          break;
+
+        case 'operation-not-allowed':
+          message =
+          'L’authentification par e-mail n’est pas activée';
+          break;
+
+        default:
+          message = 'Erreur de connexion : ${e.message ?? e.code}';
+      }
+
+      setState(() {
+        _chargement = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+
+    } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _chargement = false;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Identifiant ou mot de passe incorrect',
-          ),
+          content: Text('Une erreur est survenue lors de la connexion'),
           backgroundColor: Colors.red,
         ),
       );
@@ -136,9 +166,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
 
                       decoration:
                       const InputDecoration(
-                        labelText: 'Identifiant',
-                        prefixIcon:
-                        Icon(Icons.person),
+                        labelText: 'Adresse e-mail',
+                          prefixIcon: Icon(Icons.email),
                         border:
                         OutlineInputBorder(),
                       ),

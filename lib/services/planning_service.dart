@@ -1,30 +1,18 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/match.dart';
-import 'excel_import_service.dart';
-import 'github_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firestore_service.dart';
+import 'dart:async';
 
 
 class PlanningService {
   // ===========================================================================
   // CONFIGURATION
   // ===========================================================================
-
-  /// URL du planning sur GitHub.
-  static const String _planningUrl =
-      'https://raw.githubusercontent.com/fcssm/planning-fcssm//main/planning.json';
-
-  /// URL du fichier indiquant la version du planning.
-  static const String _versionUrl =
-      'https://raw.githubusercontent.com/fcssm/planning-fcssm//main/planning_version.json';
-
-
-
 
 
   /// Asset embarqué dans l'application.
@@ -34,9 +22,149 @@ class PlanningService {
   static const String _cacheKey = 'planning_json';
   static const String _versionKey = 'planning_version';
 
-  /// Durée maximale d'une requête réseau.
-  static const Duration _networkTimeout =
-  Duration(seconds: 5);
+// ===========================================================================
+// SURVEILLANCE DU PLANNING
+// ===========================================================================
+
+  static StreamSubscription<String?>? _versionSubscription;
+
+  static final StreamController<void> _planningController =
+  StreamController<void>.broadcast();
+
+  static Stream<void> get planningModifie =>
+      _planningController.stream;
+
+  static String? _versionPlanningConnue;
+
+  static void demarrerSurveillancePlanning() {
+    if (_versionSubscription != null) {
+      debugPrint(
+        '[PlanningService] Surveillance déjà active.',
+      );
+      return;
+    }
+
+    debugPrint(
+      '[PlanningService] Démarrage de la surveillance du planning.',
+    );
+
+    _versionSubscription =
+        FirestoreService.ecouterVersionPlanning().listen(
+              (version) async {
+            debugPrint(
+              '[PlanningService] Version reçue : '
+                  '${version ?? "aucune"}',
+            );
+
+            // Première réception :
+            // on mémorise simplement la version.
+            if (_versionPlanningConnue == null) {
+              _versionPlanningConnue = version;
+
+              debugPrint(
+                '[PlanningService] Version initiale mémorisée : $version',
+              );
+
+              return;
+            }
+
+            // Même version :
+            // aucune action.
+            if (_versionPlanningConnue == version) {
+              return;
+            }
+
+            // Nouvelle version.
+            debugPrint(
+              '[PlanningService] 🔄 Nouvelle version détectée : '
+                  '$_versionPlanningConnue → $version',
+            );
+
+            _versionPlanningConnue = version;
+
+            try {
+              await reloadPlanning();
+
+              debugPrint(
+                '[PlanningService] Planning rechargé.',
+              );
+
+              _planningController.add(null);
+            } catch (e) {
+              debugPrint(
+                '[PlanningService] Erreur lors du rechargement : $e',
+              );
+            }
+          },
+          onError: (error) {
+            debugPrint(
+              '[PlanningService] Erreur surveillance Firestore : $error',
+            );
+          },
+        );
+  }
+
+  static Future<void> arreterSurveillancePlanning() async {
+    await _versionSubscription?.cancel();
+
+    _versionSubscription = null;
+
+    debugPrint(
+      '[PlanningService] Surveillance du planning arrêtée.',
+    );
+  }
+
+// ===========================================================================
+// FIRESTORE
+// ===========================================================================
+
+  static Future<String> _chargerPlanningFirestore() async {
+    debugPrint(
+      '[PlanningService] Chargement du planning depuis Firestore.',
+    );
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('matchs')
+        .get();
+
+    debugPrint(
+      '[PlanningService] ${snapshot.docs.length} matchs récupérés.',
+    );
+
+    final List<Map<String, dynamic>> matchs = [];
+
+    for (final document in snapshot.docs) {
+      final data = document.data();
+
+      matchs.add({
+        ...data,
+        'no_match': data['no_match'] ?? document.id,
+      });
+    }
+
+    // ----------------------------------------------------------
+    // Tri par date puis par heure
+    // ----------------------------------------------------------
+
+    matchs.sort((a, b) {
+      final dateA = a['date_match']?.toString() ?? '';
+      final dateB = b['date_match']?.toString() ?? '';
+
+      final comparaisonDate = dateA.compareTo(dateB);
+
+      if (comparaisonDate != 0) {
+        return comparaisonDate;
+      }
+
+      final heureA = a['heure_match']?.toString() ?? '';
+      final heureB = b['heure_match']?.toString() ?? '';
+
+      return heureA.compareTo(heureB);
+    });
+
+    return const JsonEncoder.withIndent('  ').convert(matchs);
+  }
+
 
   // ===========================================================================
   // CHARGEMENT EN MÉMOIRE
@@ -68,7 +196,7 @@ class PlanningService {
   ///
   /// Priorité :
   ///
-  /// 1. GitHub si une nouvelle version est disponible
+  /// 1. Firebase si une nouvelle version est disponible
   /// 2. Cache local si la version est identique
   /// 3. Cache local en cas de problème réseau
   /// 4. assets/planning.json si aucun cache n'existe
@@ -102,171 +230,44 @@ class PlanningService {
       cacheOptions: const SharedPreferencesWithCacheOptions(
         allowList: {
           _cacheKey,
-          _versionKey,
         },
       ),
     );
 
-    // -------------------------------------------------------------------------
-    // 1. Lire la version locale
-    // -------------------------------------------------------------------------
-
-    String? versionLocale;
+    // =========================================================================
+    // 1. FIRESTORE
+    // =========================================================================
 
     try {
-      versionLocale = preferences.getString(_versionKey);
-      debugPrint(
-        '[PlanningService] Version locale : '
-            '${versionLocale ?? "aucune"}',
+      final planning = await _chargerPlanningFirestore();
+
+      _validatePlanningJson(planning);
+
+      // Sauvegarde du planning dans le cache local
+      await preferences.setString(
+        _cacheKey,
+        planning,
       );
+
+      debugPrint(
+        '[PlanningService] Planning chargé depuis Firestore '
+            'et enregistré dans le cache.',
+      );
+
+      return planning;
     } catch (e) {
       debugPrint(
-        '[PlanningService] Impossible de lire la version locale : $e',
+        '[PlanningService] Firestore indisponible : $e',
       );
     }
 
-    // -------------------------------------------------------------------------
-    // 2. Récupérer la version GitHub
-    // -------------------------------------------------------------------------
-
-    String? versionGitHub;
+    // =========================================================================
+    // 2. CACHE LOCAL
+    // =========================================================================
 
     try {
-      versionGitHub = await _getRemoteVersion();
-
-      debugPrint(
-        '[PlanningService] Version GitHub : $versionGitHub',
-      );
-    } catch (e) {
-      debugPrint(
-        '[PlanningService] Impossible de récupérer la version GitHub : $e',
-      );
-    }
-
-    // -------------------------------------------------------------------------
-    // 3. Version identique → utiliser directement le cache
-    // -------------------------------------------------------------------------
-
-    if (versionGitHub != null &&
-        versionLocale != null &&
-        versionGitHub == versionLocale) {
-      debugPrint(
-        '[PlanningService] Version identique → utilisation du cache.',
-      );
-
-      try {
-        final String? cache = preferences.getString(_cacheKey);
-
-        if (cache != null) {
-          _validatePlanningJson(cache);
-
-          debugPrint(
-            '[PlanningService] Planning chargé depuis le cache.',
-          );
-
-          return cache;
-        }
-
-        debugPrint(
-          '[PlanningService] Version identique mais cache absent.',
-        );
-      } catch (e) {
-        debugPrint(
-          '[PlanningService] Cache invalide : $e',
-        );
-      }
-    }
-
-    // -------------------------------------------------------------------------
-    // 4. Nouvelle version → télécharger planning.json
-    // -------------------------------------------------------------------------
-
-    if (versionGitHub != null &&
-        (versionLocale == null ||
-            versionGitHub != versionLocale)) {
-      debugPrint(
-        '[PlanningService] Nouvelle version détectée '
-            '($versionLocale → $versionGitHub).',
-      );
-
-      try {
-        final String planning =
-        await _downloadPlanning();
-
-        _validatePlanningJson(planning);
-
-        // Le JSON est valide.
-        // On peut maintenant remplacer le cache.
-        await preferences.setString(
-          _cacheKey,
-          planning,
-        );
-
-        await preferences.setString(
-          _versionKey,
-          versionGitHub,
-        );
-
-        debugPrint(
-          '[PlanningService] Nouveau planning téléchargé '
-              'et enregistré dans le cache.',
-        );
-
-        return planning;
-      } catch (e) {
-        debugPrint(
-          '[PlanningService] Échec du téléchargement '
-              'du nouveau planning : $e',
-        );
-      }
-    }
-
-    // -------------------------------------------------------------------------
-    // 5. Version GitHub indisponible
-    //
-    // On tente quand même de télécharger directement planning.json.
-    // -------------------------------------------------------------------------
-
-    if (versionGitHub == null) {
-      debugPrint(
-        '[PlanningService] Version GitHub indisponible. '
-            'Tentative directe de téléchargement du planning.',
-      );
-
-      try {
-        final String planning =
-        await _downloadPlanning();
-
-        _validatePlanningJson(planning);
-
-        await preferences.setString(
-          _cacheKey,
-          planning,
-        );
-
-        debugPrint(
-          '[PlanningService] Planning téléchargé directement '
-              'depuis GitHub.',
-        );
-
-        return planning;
-      } catch (e) {
-        debugPrint(
-          '[PlanningService] Téléchargement direct impossible : $e',
-        );
-      }
-    }
-
-    // -------------------------------------------------------------------------
-    // 6. Fallback : cache local
-    // -------------------------------------------------------------------------
-
-    debugPrint(
-      '[PlanningService] Tentative de chargement depuis le cache local.',
-    );
-
-    try {
-      final String? cache = preferences.getString(_cacheKey);
+      final String? cache =
+      preferences.getString(_cacheKey);
 
       if (cache != null) {
         _validatePlanningJson(cache);
@@ -279,114 +280,63 @@ class PlanningService {
       }
     } catch (e) {
       debugPrint(
-        '[PlanningService] Cache local indisponible ou invalide : $e',
+        '[PlanningService] Cache local invalide : $e',
       );
     }
 
-    // -------------------------------------------------------------------------
-    // 7. Fallback ultime : assets/planning.json
-    // -------------------------------------------------------------------------
-
-    debugPrint(
-      '[PlanningService] Aucun cache disponible. '
-          'Chargement depuis $_assetPath.',
-    );
+    // =========================================================================
+    // 3. ASSET DE SECOURS
+    // =========================================================================
 
     try {
-      final String assetPlanning =
+      final String planning =
       await rootBundle.loadString(_assetPath);
 
-      _validatePlanningJson(assetPlanning);
-
-      // Initialiser le cache.
-      await preferences.setString(
-        _cacheKey,
-        assetPlanning,
-      );
-
-      // Si nous connaissons la version GitHub,
-      // on la sauvegarde également.
-      if (versionGitHub != null) {
-        await preferences.setString(
-          _versionKey,
-          versionGitHub,
-        );
-      }
+      _validatePlanningJson(planning);
 
       debugPrint(
-        '[PlanningService] Planning chargé depuis les assets '
-            'et enregistré dans le cache.',
+        '[PlanningService] Planning chargé depuis les assets.',
       );
 
-      return assetPlanning;
+      return planning;
     } catch (e) {
       debugPrint(
-        '[PlanningService] Impossible de charger $_assetPath : $e',
+        '[PlanningService] Impossible de charger le planning : $e',
       );
 
       rethrow;
     }
   }
 
-  // ===========================================================================
-  // INTERNET
-  // ===========================================================================
+  static Future<bool> verifierNouvelleVersion() async {
+    try {
+      final String? versionLocale =
+      await FirestoreService.recupererVersionPlanning();
 
-  /// Récupère la version publiée sur GitHub.
-  ///
-  /// Format attendu :
-  ///
-  /// {
-  ///   "version": "2026-08-13-01"
-  /// }
-  static Future<String> _getRemoteVersion() async {
-    final uri = Uri.parse(
-      '$_versionUrl?v=${DateTime.now().millisecondsSinceEpoch}',
-    );
-    final response = await http
-        .get(uri)
-        .timeout(_networkTimeout);
-
-    if (response.statusCode != 200) {
-      throw HttpException(
-        'Erreur HTTP ${response.statusCode} '
+      debugPrint(
+        '[PlanningService] Version Firestore : '
+            '${versionLocale ?? "aucune"}',
       );
-    }
 
-    final dynamic data = jsonDecode(response.body);
-
-    if (data is! Map<String, dynamic>) {
-      throw const FormatException(
-        'planning_version.json doit contenir un objet JSON.',
+      return versionLocale != null;
+    } catch (e) {
+      debugPrint(
+        '[PlanningService] Erreur récupération version Firestore : $e',
       );
+
+      return false;
     }
-
-    final dynamic version = data['version'];
-
-    if (version is! String || version.trim().isEmpty) {
-      throw const FormatException(
-        'Le champ "version" est absent ou invalide.',
-      );
-    }
-
-    return version.trim();
   }
 
-  /// Télécharge planning.json depuis GitHub.
-  static Future<String> _downloadPlanning() async {
-    final response = await http
-        .get(Uri.parse(_planningUrl))
-        .timeout(_networkTimeout);
+// ===========================================================================
+// SURVEILLANCE DU PLANNING
+// ===========================================================================
 
-    if (response.statusCode != 200) {
-      throw HttpException(
-        'Erreur HTTP ${response.statusCode} '
-            'pour $_planningUrl',
-      );
-    }
-
-    return response.body;
+  static Stream<String?> ecouterVersionPlanning() {
+    return FirestoreService.ecouterVersionPlanning();
   }
+
+
 
   // ===========================================================================
   // VALIDATION
@@ -394,15 +344,13 @@ class PlanningService {
 
   /// Vérifie que planning.json contient bien une liste JSON.
   ///
-  /// Ton code actuel attend :
+  /// le code actuel attend :
   ///
   /// [
   ///   {...},
   ///   {...}
   /// ]
-  static void _validatePlanningJson(
-      String jsonString,
-      ) {
+  static void _validatePlanningJson(String jsonString,) {
     final dynamic data = jsonDecode(jsonString);
 
     if (data is! List) {
@@ -433,7 +381,6 @@ class PlanningService {
   ///
   /// Très utile pour tester le "premier lancement".
   static Future<void> clearCache() async {
-
     final SharedPreferencesWithCache preferences =
     await SharedPreferencesWithCache.create(
       cacheOptions: const SharedPreferencesWithCacheOptions(
@@ -458,151 +405,9 @@ class PlanningService {
   // Publication du planning
   // ===========================================================================
 
-  static String genererJson(
-      List<MatchFoot> matchs,
-      ) {
+  static String genererJson(List<MatchFoot> matchs,) {
     return jsonEncode(
-        matchs.map((match) => match.toJson()).toList(),
+      matchs.map((match) => match.toJson()).toList(),
     );
-  }
-
-  static Future<String> genererNouvelleVersion() async {
-    final versionActuelle =
-    await GithubService.recupererVersion();
-
-    final maintenant = DateTime.now();
-
-    final date =
-        '${maintenant.year.toString().padLeft(4, '0')}-'
-        '${maintenant.month.toString().padLeft(2, '0')}-'
-        '${maintenant.day.toString().padLeft(2, '0')}';
-
-    // ----------------------------------------------------------
-    // Aucune version existante
-    // ----------------------------------------------------------
-
-    if (versionActuelle == null ||
-        versionActuelle.isEmpty) {
-      return '$date-01';
-    }
-
-    // ----------------------------------------------------------
-    // Exemple :
-    // 2026-08-19-03
-    // ----------------------------------------------------------
-
-    final morceaux = versionActuelle.split('-');
-
-    if (morceaux.length != 4) {
-      // Format inattendu
-      return '$date-01';
-    }
-
-    final ancienneDate =
-        '${morceaux[0]}-'
-        '${morceaux[1]}-'
-        '${morceaux[2]}';
-
-    final ancienNumero =
-        int.tryParse(morceaux[3]) ?? 0;
-
-    // ----------------------------------------------------------
-    // Même jour
-    // ----------------------------------------------------------
-
-    if (ancienneDate == date) {
-      final nouveauNumero =
-          ancienNumero + 1;
-
-      return '$date-'
-          '${nouveauNumero.toString().padLeft(2, '0')}';
-    }
-
-    // ----------------------------------------------------------
-    // Nouveau jour
-    // ----------------------------------------------------------
-
-    return '$date-01';
-  }
-
-  static Future<void> publierPlanning({
-    required List<MatchFoot> listematchs,
-    required String token,
-  }) async {
-
-    // Génération JSON
-    final planningJson = genererJson(listematchs);
-
-    //debugPrint(planningJson);
-
-    // Compression
-    final resultat =
-    await ExcelImportService.mesurerTailleJson(
-      planningJson,
-    );
-
-    final planningBase64 =
-    resultat['base64'] as String;
-
-    final int tailleBase64 =
-    resultat['tailleBase64'] as int;
-
-    if (tailleBase64 >= 60000) {
-      throw Exception(
-        'Le planning est trop volumineux.',
-      );
-    }
-
-    // Version
-    final version = await genererNouvelleVersion();
-
-    // Publication
-    await GithubService.envoyerPlanning(
-      token: token,
-      version: version,
-      planningBase64: planningBase64,
-    );
-  }
-
-  static Future<bool> verifierNouvelleVersion() async {
-    try {
-      final SharedPreferencesWithCache preferences =
-      await SharedPreferencesWithCache.create(
-        cacheOptions: const SharedPreferencesWithCacheOptions(
-          allowList: {
-            _cacheKey,
-            _versionKey,
-          },
-        ),
-      );
-
-      final String? versionLocale =
-      preferences.getString(_versionKey);
-
-      final String versionGitHub =
-      await _getRemoteVersion();
-
-      debugPrint(
-        '[PlanningService] Vérification version : '
-            'locale=$versionLocale / GitHub=$versionGitHub',
-      );
-
-      if (versionLocale == versionGitHub) {
-        return false;
-      }
-
-      debugPrint(
-        '[PlanningService] 🔄 Nouvelle version détectée : '
-            '$versionLocale → $versionGitHub',
-      );
-
-      return true;
-    } catch (e) {
-      debugPrint(
-        '[PlanningService] Erreur vérification version : $e',
-      );
-
-      return false;
-    }
   }
 }

@@ -3,14 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:week_number/iso.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/match.dart' ;
 import '../models/terrain.dart';
+import '../services/firestore_service.dart';
 import '../services/terrain_service.dart';
 import '../services/planning_service.dart';
 import 'admin_login_page.dart';
-import '../services/admin_service.dart';
-import '../services/github_service.dart';
+
 
 
 class PlanningPage extends StatefulWidget {
@@ -28,9 +29,10 @@ class PlanningPage extends StatefulWidget {
 
 class _PlanningPageState extends State<PlanningPage> {
 
+  StreamSubscription<void>? _planningSubscription;
+
   bool isAdmin = false;
-  Timer? _planningSyncTimer;
-  bool _synchronisationEnCours = false;
+
   /// Tous les matchs provenant du JSON
   List<MatchFoot> tousLesMatchs = [];
 
@@ -111,76 +113,39 @@ class _PlanningPageState extends State<PlanningPage> {
   @override
   void initState() {
     super.initState();
-    _chargerIsAdmin();
-    // Au démarrage :
-    // on affiche automatiquement la semaine actuelle
+
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (!mounted) return;
+
+      setState(() {
+        isAdmin = user != null;
+      });
+    });
+
+    // Surveillance des modifications du planning
+    _planningSubscription =
+        PlanningService.planningModifie.listen((_) {
+          debugPrint(
+            '[PlanningPage] 🔄 Planning modifié, rechargement.',
+          );
+
+          if (!mounted) {
+            return;
+          }
+
+          // Recharger les matchs depuis Firestore
+          chargerPlanning(semaineSelectionnee);
+        });
+
     // Chargement initial
     chargerPlanning(semaineSelectionnee);
-
-    // Démarrage de la synchronisation
-    _demarrerSynchronisation();
   }
 
   @override
   void dispose() {
-    _planningSyncTimer?.cancel();
+    _planningSubscription?.cancel();
     super.dispose();
-  }
 
-  void _demarrerSynchronisation() {
-    _planningSyncTimer = Timer.periodic(
-      const Duration(seconds: 30),
-          (_) {
-        _verifierSynchronisation();
-      },
-    );
-  }
-
-  Future<void> _verifierSynchronisation() async {
-    if (_synchronisationEnCours) {
-      return;
-    }
-
-    _synchronisationEnCours = true;
-
-    try {
-      debugPrint(
-        '[PlanningPage] Vérification du planning...',
-      );
-
-      final bool nouvelleVersion =
-      await PlanningService.verifierNouvelleVersion();
-
-      if (!nouvelleVersion) {
-        debugPrint(
-          '[PlanningPage] Planning déjà à jour.',
-        );
-
-        return;
-      }
-
-      debugPrint(
-        '[PlanningPage] 🔄 Nouvelle version du planning détectée.',
-      );
-
-      final String jsonString =
-      await PlanningService.reloadPlanning();
-
-      if (!mounted) {
-        return;
-      }
-
-      // Ici tu peux reprendre exactement
-      // ton traitement actuel du JSON.
-      await _actualiserPlanning(jsonString,semaineSelectionnee);
-
-    } catch (e) {
-      debugPrint(
-        '[PlanningPage] Erreur synchronisation : $e',
-      );
-    } finally {
-      _synchronisationEnCours = false;
-    }
   }
 
 
@@ -645,22 +610,9 @@ class _PlanningPageState extends State<PlanningPage> {
       // PUBLICATION SUR GITHUB
       // ============================================================
 
-      final githubService = GithubService();
-      final token = await githubService.demanderTokenGitHub(context);
-
-      if (!mounted) {
-        return;
-      }
-
-      if (token == null ||
-          token.trim().isEmpty) {
-        return;
-      }
-
       try {
-          await PlanningService.publierPlanning(
-          listematchs: tousLesMatchs,
-          token: token,
+          await FirestoreService.modifierMatch(
+          match: match,
         );
 
         // ----------------------------------------------------------
@@ -676,8 +628,7 @@ class _PlanningPageState extends State<PlanningPage> {
           const SnackBar(
             backgroundColor: Colors.green,
             content: Text(
-              'Match modifié et planning '
-                  'publié sur GitHub.',
+              'Match modifié.',
             ),
           ),
         );
@@ -709,16 +660,6 @@ class _PlanningPageState extends State<PlanningPage> {
     }
   }
 
-
-  Future<void> _chargerIsAdmin() async {
-    final admin = await AdminService.isAdmin();
-
-    if (!mounted) return;
-
-    setState(() {
-      isAdmin = admin;
-    });
-  }
 
   void _afficherModification(MatchFoot match) {
 
@@ -1054,6 +995,7 @@ class _PlanningPageState extends State<PlanningPage> {
                     }
 
                     final nouveauMatch = MatchFoot(
+                      numeroMatch: '1',
                       equipeLocale: equipeLocale!,
                       recevant: 'oui',
                       dateMatch: formatDate2(dateMatch!),
@@ -1087,28 +1029,18 @@ class _PlanningPageState extends State<PlanningPage> {
 
 
 
-    // ============================================================
-    // PUBLICATION SUR GITHUB
-    // ============================================================
-
-    final githubService = GithubService();
-    final token = await githubService.demanderTokenGitHub(context);
-
-    if (token == null ||
-        token.trim().isEmpty) {
-      return;
-    }
-
     // Ici : enregistrement dans ta base
     setState(() {
       tousLesMatchs.add(resultat);
       actualiserMatchsSemaine();
     });
 
-    await PlanningService.publierPlanning(
-      listematchs: tousLesMatchs,
-      token: token,
+
+    await FirestoreService.ajouterMatch(
+        match: resultat,
     );
+
+
   }
 
   String formatHeure(TimeOfDay heure) {
@@ -1155,32 +1087,38 @@ class _PlanningPageState extends State<PlanningPage> {
       return;
     }
 
-
-
-
     // Ici : suppression dans ta base
     // Puis rechargement du planning
 
     // ============================================================
-    // PUBLICATION SUR GITHUB
+    // PUBLICATION SUR FIREBASE
     // ============================================================
-
-    final githubService = GithubService();
-    final token = await githubService.demanderTokenGitHub(context);
-
-    if (token == null ||
-        token.trim().isEmpty) {
-      return;
-    }
 
     setState(() {
       tousLesMatchs.remove(match);
       actualiserMatchsSemaine();
     });
 
-    await PlanningService.publierPlanning(
-      listematchs: tousLesMatchs,
-      token: token,
+    final numeroMatch = match.numeroMatch;
+
+    debugPrint('Match a supprimer: $numeroMatch');
+
+    if (numeroMatch == null ||
+      numeroMatch.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(
+              'Impossible de supprimer le match : '
+              'numéro de match absent.',
+            ),
+          ),
+         );
+        return;
+    }
+
+    await FirestoreService.supprimerMatch(
+      numeroMatch: numeroMatch,
     );
 
   }
@@ -1191,22 +1129,51 @@ class _PlanningPageState extends State<PlanningPage> {
       appBar: AppBar(
         leading: GestureDetector(
             onLongPress: () async {
-              final resultat = await Navigator.push<bool>(
+              if (isAdmin) {
+                final confirmer = await showDialog<bool>(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text('Déconnexion'),
+                      content: const Text(
+                        'Voulez-vous vous déconnecter du mode administrateur ?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context, false);
+                          },
+                          child: const Text('Annuler'),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.pop(context, true);
+                          },
+                          child: const Text('Déconnexion'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+
+                if (confirmer == true) {
+                  await FirebaseAuth.instance.signOut();
+                }
+
+                return;
+              }
+
+              // -------------------------------------------------
+              // Utilisateur normal : ouverture de la connexion
+              // -------------------------------------------------
+
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const AdminLoginPage(),
                 ),
               );
 
-              if (!mounted) return;
-
-              if (resultat == true) {
-                setState(() {
-                  isAdmin = true;
-                });
-                // Informe la HomePage
-                widget.onAdminConnecte?.call();
-              }
             },
           child: Padding(
             padding: const EdgeInsets.all(8),

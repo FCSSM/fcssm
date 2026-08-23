@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "580459181774",
+    "project_id": "fcssm-bffda",
+    "storage_bucket": "fcssm-bffda.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:580459181774:android:e02a13fa7806296221829f",
+        "android_client_info": {
+          "package_name": "fr.fcssm.fcssm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPQpa10xrlW2nI-eF6nPRdJPplOFBWJj8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

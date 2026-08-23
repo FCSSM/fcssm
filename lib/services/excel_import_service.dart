@@ -84,9 +84,7 @@ class ExcelImportService {
 static Future<ExcelImportResult> convertirToutesLesLignes(
 List<List<dynamic>> lignes,
 ) async {
-//  static ExcelImportResult convertirToutesLesLignes(
-//      List<List<dynamic>> lignes,
- //     ) {
+
   await _chargerCorrespondanceCompetitions();
    final List<Map<String, dynamic>> matchs = [];
     final List<ExcelImportError> erreurs = [];
@@ -194,8 +192,6 @@ List<List<dynamic>> lignes,
         dateMatch,
       ),
 
-     // 'no_semaine': '33',
-
       'no_match': numeroMatch,
 
       'club_adverse': clubAdverse,
@@ -203,6 +199,8 @@ List<List<dynamic>> lignes,
       'report': reporteRejoue,
 
       'date_report': dateReport,
+
+      'modification': '',
     };
   }
 

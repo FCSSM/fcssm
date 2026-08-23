@@ -1,9 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/planning_service.dart';
 import 'planning_page.dart';
 import 'impression_page.dart';
 import 'planning_entrainement_page.dart';
 import 'administration_page.dart';
-import '../services/admin_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,17 +20,13 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _chargerIsAdmin();
-  }
-
-  Future<void> _chargerIsAdmin() async {
-    final admin = await AdminService.isAdmin();
-
-    if (!mounted) return;
-
-    setState(() {
-      isAdmin = admin;
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (!mounted) return;
+      setState(() {
+        isAdmin = user != null;
+      });
     });
+    PlanningService.demarrerSurveillancePlanning();
   }
 
   void _adminConnecte() {

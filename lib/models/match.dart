@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 class MatchFoot {
+  String? numeroMatch;
   final String equipeLocale;
   final String recevant;
   String dateMatch;
@@ -14,6 +15,7 @@ class MatchFoot {
   String? modification;
 
   MatchFoot({
+    required this.numeroMatch,
     required this.equipeLocale,
     required this.recevant,
     required this.dateMatch,
@@ -29,6 +31,7 @@ class MatchFoot {
 
   factory MatchFoot.fromJson(Map<String, dynamic> json) {
     return MatchFoot(
+      numeroMatch: json['no_match']?.toString(),
       equipeLocale: json['equipe_locale'],
       recevant: json['recevant'],
       dateMatch: json['date_match'],
@@ -50,6 +53,7 @@ class MatchFoot {
 
   Map<String, dynamic> toJson() {
     return {
+      'numero_match': numeroMatch,
       'equipe_locale': equipeLocale,
       'recevant': recevant,
       'date_match': dateMatch,
@@ -60,10 +64,9 @@ class MatchFoot {
       'ville': ville,
       'competition': competition,
       'no_semaine': noSemaine,
-      "modification": modification,
+      'modification': modification,
     };
   }
-
   /// Date convertie en DateTime
   DateTime get date {
     return DateFormat('dd/MM/yyyy').parseStrict(dateMatch);
