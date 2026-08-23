@@ -5,6 +5,7 @@ import 'planning_page.dart';
 import 'impression_page.dart';
 import 'planning_entrainement_page.dart';
 import 'administration_page.dart';
+import 'planning_equipes.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -41,6 +42,7 @@ class _HomePageState extends State<HomePage> {
       PlanningPage(
         onAdminConnecte: _adminConnecte,
       ),
+      const PlanningEquipes(),
       const PlanningEntrainementPage(),
       const ImpressionPage(),
     ];
@@ -52,8 +54,8 @@ class _HomePageState extends State<HomePage> {
         selectedIndex: index,
 
         onDestinationSelected: (value) {
-          // Administration = destination 3
-          if (value == 3) {
+          // Administration = destination 4
+          if (value == 4) {
             if (!isAdmin) {
               return;
             }
@@ -78,6 +80,11 @@ class _HomePageState extends State<HomePage> {
           const NavigationDestination(
             icon: Icon(Icons.calendar_month),
             label: "Matchs",
+          ),
+
+          NavigationDestination(
+            icon: Icon(Icons.groups),
+            label: "Équipes",
           ),
 
           const NavigationDestination(

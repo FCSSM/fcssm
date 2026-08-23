@@ -484,10 +484,10 @@ class _PlanningEntrainementPageState
   Color couleurEntrainement(String lieu) {
     switch (lieu) {
       case 'SAINT SATURNIN':
-        return Colors.red.shade200;
+        return Colors.yellow.shade200;
 
       case 'LA MILESSE':
-        return Colors.yellow.shade200;
+        return Colors.red.shade200;
 
       case 'SAINT SATURNIN SYNTHETIQUE':
         return Colors.green.shade200;
