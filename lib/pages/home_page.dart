@@ -101,8 +101,8 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(
               Icons.admin_panel_settings,
             ),
-            label: "Administration",
-            tooltip: "Administration",
+            label: "Admin.",
+            tooltip: "Admin.",
             enabled: isAdmin,
           ),
         ],
