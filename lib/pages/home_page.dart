@@ -51,6 +51,11 @@ class _HomePageState extends State<HomePage> {
       body: pages[index],
 
       bottomNavigationBar: NavigationBar(
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(
+            fontSize: 12,
+          ),
+        ),
         selectedIndex: index,
 
         onDestinationSelected: (value) {
