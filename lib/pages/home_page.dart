@@ -53,7 +53,7 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: NavigationBar(
         labelTextStyle: WidgetStatePropertyAll(
           TextStyle(
-            fontSize: 12,
+            fontSize: 11,
           ),
         ),
         selectedIndex: index,

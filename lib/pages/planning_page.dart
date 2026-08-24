@@ -33,6 +33,9 @@ class _PlanningPageState extends State<PlanningPage> {
 
   bool isAdmin = false;
 
+  final PageController _semainePageController =
+  PageController(initialPage: 1);
+
   /// Tous les matchs provenant du JSON
   List<MatchFoot> tousLesMatchs = [];
 
@@ -208,6 +211,7 @@ class _PlanningPageState extends State<PlanningPage> {
   @override
   void dispose() {
     _planningSubscription?.cancel();
+    _semainePageController.dispose();
     super.dispose();
 
   }
@@ -1227,6 +1231,280 @@ class _PlanningPageState extends State<PlanningPage> {
 
   }
 
+  void _semaineSwipee(int page) {
+    if (page == 1) {
+      return;
+    }
+
+    if (page == 0) {
+      if (semaineSelectionnee <= 1) {
+        // On est déjà à la première semaine.
+        _semainePageController.jumpToPage(1);
+        return;
+      }
+
+      semainePrecedente();
+    }
+
+    if (page == 2) {
+      semaineSuivante();
+    }
+
+    // On remet immédiatement le PageView
+    // sur la semaine centrale.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      if (_semainePageController.hasClients) {
+        _semainePageController.jumpToPage(1);
+      }
+    });
+  }
+
+  Widget _buildListeMatchs() {
+    if (matchsSemaine.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.sports_soccer,
+              size: 64,
+              color: Colors.blue,
+            ),
+            SizedBox(height: 16),
+            Text(
+              "Aucun match cette semaine",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              "Profitez-en pour vous reposer ! 😊",
+              style: TextStyle(
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: matchsSemaine.length,
+
+      itemBuilder: (context, index) {
+        final match = matchsSemaine[index];
+
+        final bool afficherDate =
+            index == 0 ||
+                match.date != matchsSemaine[index - 1].date;
+
+        return Column(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+
+          children: [
+            // ---------------------------------------------------
+            // DATE
+            // ---------------------------------------------------
+
+            if (afficherDate)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  8,
+                ),
+                child: Text(
+                  formatDate(match.date),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+            // ---------------------------------------------------
+            // CARD DU MATCH
+            // ---------------------------------------------------
+
+            Card(
+              color: couleurMatch(match.couleur),
+              margin: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+
+              child: ListTile(
+                dense: true,
+
+                // -------------------------------------------------
+                // Appui sur le match
+                // -------------------------------------------------
+
+                onTap:
+                match.modification != null &&
+                    match.modification!
+                        .trim()
+                        .isNotEmpty
+                    ? () => _afficherModification(match)
+                    : null,
+
+                // -------------------------------------------------
+                // HEURE
+                // -------------------------------------------------
+
+                leading: Text(
+                  match.heureMatch,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+
+                // -------------------------------------------------
+                // ÉQUIPES + STATUT
+                // -------------------------------------------------
+
+                title: Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
+
+                  mainAxisSize:
+                  MainAxisSize.min,
+
+                  children: [
+                    Row(
+                      children: [
+
+                        Expanded(
+                          child: Text(
+                            '${match.equipeLocale} - '
+                                '${match.equipeAdverse}',
+                            maxLines: 1,
+                            overflow:
+                            TextOverflow.ellipsis,
+                            style:
+                            const TextStyle(
+                              fontWeight:
+                              FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+
+                        // -----------------------------------------
+                        // ⚠️ Modification
+                        // -----------------------------------------
+
+                        if (match.modification != null &&
+                            match.modification!
+                                .trim()
+                                .isNotEmpty &&
+                            (match.statut == null ||
+                                match.statut ==
+                                    MatchFoot.statutNormal))
+                          const Padding(
+                            padding:
+                            EdgeInsets.only(left: 6),
+                            child: Icon(
+                              Icons
+                                  .warning_amber_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                      ],
+                    ),
+
+                    // -----------------------------------------
+                    // STATUT
+                    // -----------------------------------------
+
+                    _buildStatutMatch(match),
+                  ],
+                ),
+
+                // -------------------------------------------------
+                // STADE - VILLE
+                // -------------------------------------------------
+
+                subtitle: Text(
+                  '${match.stade} - ${match.ville}',
+                  maxLines: 1,
+                  overflow:
+                  TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                  ),
+                ),
+
+                // -------------------------------------------------
+                // ADMINISTRATION
+                // -------------------------------------------------
+
+                trailing: isAdmin
+                    ? Row(
+                  mainAxisSize:
+                  MainAxisSize.min,
+                  children: [
+
+                    // Compétition
+                    Text(
+                      match.competition,
+                      style:
+                      const TextStyle(
+                        fontSize: 11,
+                      ),
+                    ),
+
+                    // Modifier
+                    IconButton(
+                      icon: const Icon(
+                        Icons.edit,
+                        size: 20,
+                      ),
+                      tooltip:
+                      'Modifier le match',
+                      onPressed: () {
+                        _modifierMatch(match);
+                      },
+                    ),
+
+                    // Supprimer
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        size: 20,
+                      ),
+                      tooltip:
+                      'Supprimer le match',
+                      onPressed: () =>
+                          supprimerMatch(match),
+                    ),
+                  ],
+                )
+                    : Text(
+                  match.competition,
+                  style:
+                  const TextStyle(
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1364,7 +1642,38 @@ class _PlanningPageState extends State<PlanningPage> {
         tooltip: "Ajouter un match",
       )
           : null,
-      body: matchsSemaine.isEmpty
+      body: PageView(
+      controller: _semainePageController,
+
+      // ---------------------------------------------------------
+      // Détection du balayage
+      // ---------------------------------------------------------
+
+      onPageChanged: _semaineSwipee,
+
+      children: [
+        // =======================================================
+        // SEMAINE PRÉCÉDENTE
+        // =======================================================
+
+        _buildListeMatchs(),
+
+        // =======================================================
+        // SEMAINE ACTUELLE
+        // =======================================================
+
+        _buildListeMatchs(),
+
+        // =======================================================
+        // SEMAINE SUIVANTE
+        // =======================================================
+
+        _buildListeMatchs(),
+      ],
+    ),
+
+          /*
+      matchsSemaine.isEmpty
           ? const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1603,6 +1912,7 @@ class _PlanningPageState extends State<PlanningPage> {
           );
         },
       ),
+      */
     );
   }
 }
