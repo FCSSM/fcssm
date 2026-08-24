@@ -1,6 +1,17 @@
 import 'package:intl/intl.dart';
 
 class MatchFoot {
+
+  // ===========================================================================
+  // STATUTS DU MATCH
+  // ===========================================================================
+
+  static const String statutNormal = 'normal';
+  static const String statutReporte = 'reporte';
+  static const String statutForfaitFc = 'forfait_fc';
+  static const String statutForfaitAdverse = 'forfait_adverse';
+
+
   String? numeroMatch;
   final String equipeLocale;
   final String recevant;
@@ -13,6 +24,7 @@ class MatchFoot {
   final String competition;
   final int noSemaine;
   String? modification;
+  String? statut;
 
   MatchFoot({
     required this.numeroMatch,
@@ -27,6 +39,7 @@ class MatchFoot {
     required this.competition,
     required this.noSemaine,
     this.modification,
+    this.statut,
   });
 
   factory MatchFoot.fromJson(Map<String, dynamic> json) {
@@ -43,6 +56,7 @@ class MatchFoot {
       competition: json['competition'],
       noSemaine: json['no_semaine'],
       modification: json['modification'],
+      statut: json['statut'],
     );
   }
 
@@ -65,6 +79,7 @@ class MatchFoot {
       'competition': competition,
       'no_semaine': noSemaine,
       'modification': modification,
+      'statut': statut,
     };
   }
   /// Date convertie en DateTime

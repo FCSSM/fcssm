@@ -110,6 +110,70 @@ class _PlanningPageState extends State<PlanningPage> {
       ..sort();
   }
 
+
+  Widget _buildStatutMatch(MatchFoot match) {
+    String? texte;
+    IconData? icone;
+    Color? couleur;
+
+    switch (match.statut) {
+      case MatchFoot.statutReporte:
+        texte = 'REPORTÉ';
+        icone = Icons.event_busy;
+        couleur = Colors.orange.shade700;
+        break;
+
+      case MatchFoot.statutForfaitFc:
+        texte = 'FORFAIT FCSSM';
+        icone = Icons.cancel;
+        couleur = Colors.red.shade700;
+        break;
+
+      case MatchFoot.statutForfaitAdverse:
+        texte = 'FORFAIT ADVERSE';
+        icone = Icons.block;
+        couleur = Colors.blue.shade700;
+        break;
+
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(top: 3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 7,
+          vertical: 2,
+        ),
+        decoration: BoxDecoration(
+          color: couleur,
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icone,
+              color: Colors.white,
+              size: 13,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              texte,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -340,6 +404,9 @@ class _PlanningPageState extends State<PlanningPage> {
     '🕐 ${match.heureMatch}\n'
     '📍 ${match.stade}';
 
+    String statutSelectionne =
+        match.statut ?? MatchFoot.statutNormal;
+
     final heureController = TextEditingController(
       text: match.heureMatch,
     );
@@ -397,6 +464,41 @@ class _PlanningPageState extends State<PlanningPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+
+                      DropdownButtonFormField<String>(
+                        initialValue: statutSelectionne,
+                        decoration: const InputDecoration(
+                          labelText: 'Statut du match',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: MatchFoot.statutNormal,
+                            child: Text('Match normal'),
+                          ),
+                          DropdownMenuItem(
+                            value: MatchFoot.statutReporte,
+                            child: Text('Match reporté'),
+                          ),
+                          DropdownMenuItem(
+                            value: MatchFoot.statutForfaitFc,
+                            child: Text('Forfait FCSSM'),
+                          ),
+                          DropdownMenuItem(
+                            value: MatchFoot.statutForfaitAdverse,
+                            child: Text('Forfait adverse'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+
+                          setDialogState(() {
+                            statutSelectionne = value;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
 
                       // ==================================================
                       // DATE
@@ -571,6 +673,8 @@ class _PlanningPageState extends State<PlanningPage> {
           break;
         }
       }
+
+      match.statut = statutSelectionne;
 
       // ============================================================
       // NOUVELLE DATE AU FORMAT JJ/MM/AAAA
@@ -1323,13 +1427,21 @@ class _PlanningPageState extends State<PlanningPage> {
                   vertical: 4,
                 ),
                 child: ListTile(
+                  dense: true,
+
                   // ---------------------------------------------------
                   // Appui sur le match
                   // ---------------------------------------------------
+
                   onTap: match.modification != null &&
-                  match.modification!.trim().isNotEmpty
-                  ? () => _afficherModification(match)
+                      match.modification!.trim().isNotEmpty
+                      ? () => _afficherModification(match)
                       : null,
+
+                  // ---------------------------------------------------
+                  // HEURE
+                  // ---------------------------------------------------
+
                   leading: Text(
                     match.heureMatch,
                     style: const TextStyle(
@@ -1337,68 +1449,154 @@ class _PlanningPageState extends State<PlanningPage> {
                       fontSize: 12,
                     ),
                   ),
-                  title: Row(
+
+                  // ---------------------------------------------------
+                  // ÉQUIPES + STATUT
+                  // ---------------------------------------------------
+
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Nom des équipes
-                      Expanded(
-                        child: Text(
-                          "${match.equipeLocale} - "
-                              "${match.equipeAdverse}",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+
+                      // -------------------------------------------------
+                      // Équipes
+                      // -------------------------------------------------
+
+                      Row(
+                        children: [
+
+                          Expanded(
+                            child: Text(
+                              '${match.equipeLocale} - '
+                                  '${match.equipeAdverse}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
-                        ),
+
+                          // ---------------------------------------------
+                          // ⚠️ Match modifié
+                          // ---------------------------------------------
+
+                          if (match.modification != null &&
+                              match.modification!.trim().isNotEmpty &&
+                              (match.statut == null ||
+                                  match.statut == MatchFoot.statutNormal))
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ),
+
+                          // -------------------------------------------------
+                          // STATUT
+                          // -------------------------------------------------
+
+                          _buildStatutMatch(match),
+                        ],
                       ),
 
-                      // ------------------------------------------------
-                      // ⚠️ Match modifié
-                      // ------------------------------------------------
-                      if (match.modification != null &&
-                          match.modification!.trim().isNotEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: Icon(
-                            Icons.warning_amber_rounded,
-                            color: Colors.white,
-                            size: 26,
+                      // -------------------------------------------------
+                      // STATUT
+                      // -------------------------------------------------
+
+                      if (match.statut == MatchFoot.statutReporte)
+                        const Text(
+                          'MATCH REPORTÉ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+
+                      if (match.statut == MatchFoot.statutForfaitFc)
+                        const Text(
+                          'FORFAIT FCSSM',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+
+                      if (match.statut == MatchFoot.statutForfaitAdverse)
+                        const Text(
+                          'FORFAIT ADVERSE',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
                           ),
                         ),
                     ],
                   ),
+
+                  // ---------------------------------------------------
+                  // STADE - VILLE
+                  // ---------------------------------------------------
+
                   subtitle: Text(
-                    "${match.stade} - ${match.ville}",
+                    '${match.stade} - ${match.ville}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
                     ),
                   ),
+
+                  // ---------------------------------------------------
+                  // ADMINISTRATION
+                  // ---------------------------------------------------
+
                   trailing: isAdmin
-                    ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(match.competition),
+                      ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
 
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          tooltip: 'Modifier le match',
-                          onPressed: () {
-                             _modifierMatch(match);
-                          },
-                        ),
-
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          tooltip: 'Supprimer le match',
-                          onPressed: () => supprimerMatch(match),
-                        ),
-                      ],
-                    )
-                  : Text(
+                      // Compétition
+                      Text(
                         match.competition,
+                        style: const TextStyle(
+                          fontSize: 11,
+                        ),
+                      ),
+
+                      // Modifier
+                      IconButton(
+                        icon: const Icon(
+                          Icons.edit,
+                          size: 20,
+                        ),
+                        tooltip: 'Modifier le match',
+                        onPressed: () {
+                          _modifierMatch(match);
+                        },
+                      ),
+
+                      // Supprimer
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          size: 20,
+                        ),
+                        tooltip: 'Supprimer le match',
+                        onPressed: () => supprimerMatch(match),
+                      ),
+                    ],
+                  )
+                      : Text(
+                    match.competition,
+                    style: const TextStyle(
+                      fontSize: 11,
                     ),
-
+                  ),
                 ),
-
               ),
 
             ],
