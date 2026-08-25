@@ -47,6 +47,30 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       // Connexion réussie
       Navigator.pop(context, true);
 
+    /*  final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        final idTokenResult =
+        await user.getIdTokenResult(true);
+
+        debugPrint(
+          '[AUTH] Email : ${user.email}',
+        );
+
+        debugPrint(
+          '[AUTH] UID : ${user.uid}',
+        );
+
+        debugPrint(
+          '[AUTH] Claims : ${idTokenResult.claims}',
+        );
+
+        debugPrint(
+          '[AUTH] Admin : '
+              '${idTokenResult.claims?['admin']}',
+        );
+      }*/
+
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
 

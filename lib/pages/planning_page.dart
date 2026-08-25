@@ -181,13 +181,53 @@ class _PlanningPageState extends State<PlanningPage> {
   void initState() {
     super.initState();
 
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if (!mounted) return;
+    FirebaseAuth.instance.authStateChanges().listen(
+          (User? user) async {
+        if (!mounted) return;
 
-      setState(() {
-        isAdmin = user != null;
-      });
-    });
+        if (user == null) {
+          setState(() {
+            isAdmin = false;
+          });
+          return;
+        }
+
+        try {
+          // Force le rafraîchissement du token afin de récupérer
+          // les dernières custom claims.
+          final idTokenResult =
+          await user.getIdTokenResult(true);
+
+          final admin =
+              idTokenResult.claims?['admin'] == true;
+
+          debugPrint(
+            '[PlanningPage] Utilisateur : ${user.email}',
+          );
+
+          debugPrint(
+            '[PlanningPage] Admin : $admin',
+          );
+
+          if (!mounted) return;
+
+          setState(() {
+            isAdmin = admin;
+          });
+        } catch (e) {
+          debugPrint(
+            '[PlanningPage] Erreur récupération rôle admin : $e',
+          );
+
+          if (!mounted) return;
+
+          setState(() {
+            isAdmin = false;
+          });
+        }
+      },
+    );
+
 
     // Surveillance des modifications du planning
     _planningSubscription =
