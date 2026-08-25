@@ -1143,7 +1143,7 @@ class _PlanningPageState extends State<PlanningPage> {
                     }
 
                     final nouveauMatch = MatchFoot(
-                      numeroMatch: '1',
+                      numeroMatch: '',
                       equipeLocale: equipeLocale!,
                       recevant: 'oui',
                       dateMatch: formatDate2(dateMatch!),
@@ -1175,19 +1175,57 @@ class _PlanningPageState extends State<PlanningPage> {
       return;
     }
 
+    try {
 
+      // ============================================================
+      // Enregistrement dans Firestore
+      // Le numéro M-AAAA-MM-JJ-XXX est généré ici
+      // ============================================================
 
-    // Ici : enregistrement dans ta base
-    setState(() {
-      tousLesMatchs.add(resultat);
-      actualiserMatchsSemaine();
-    });
+     // await FirestoreService.testerCompteurMatch();
 
-
-    await FirestoreService.ajouterMatch(
+      final numeroMatch = await FirestoreService.ajouterMatch(
         match: resultat,
-    );
+      );
 
+      debugPrint(
+        '[Administration] Match ajouté : $numeroMatch',
+      );
+
+      // ============================================================
+      // Mise à jour de l'affichage local
+      // ============================================================
+
+      if (!mounted) {
+        return;
+      }
+
+    /*  setState(() {
+        tousLesMatchs.add(resultat);
+        actualiserMatchsSemaine();
+      });
+*/
+    } catch (e, stackTrace) {
+      debugPrint(
+        '[Administration] Erreur ajout match : $e',
+      );
+
+      debugPrint(
+        '$stackTrace',
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Erreur lors de l\'ajout du match : $e',
+          ),
+        ),
+      );
+    }
 
   }
 

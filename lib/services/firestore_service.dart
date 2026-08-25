@@ -431,7 +431,7 @@ class FirestoreService {
     return '$date-01';
   }
 
-  static Future<String> _genererNumeroMatchManuel() async {
+ /* static Future<String> _genererNumeroMatchManuel() async {
     final compteurReference = _db
         .collection('configuration')
         .doc('numero_match_manuel');
@@ -469,7 +469,131 @@ class FirestoreService {
 
       return 'M-$date-${nouveauNumero.toString().padLeft(3, '0')}';
     });
+  }*/
+
+  static Future<String> _genererNumeroMatchManuel() async {
+    final compteurReference = _db
+        .collection('configuration')
+        .doc('numero_match_manuel');
+
+    try {
+      debugPrint(
+        '[FirestoreService] Début génération numéro match',
+      );
+
+      return await _db.runTransaction<String>(
+            (transaction) async {
+          debugPrint(
+            '[FirestoreService] Transaction démarrée',
+          );
+
+          final snapshot =
+          await transaction.get(compteurReference);
+
+          debugPrint(
+            '[FirestoreService] Lecture compteur terminée - '
+                'exists=${snapshot.exists}',
+          );
+
+          int dernierNumero = 0;
+
+          if (snapshot.exists) {
+            final data = snapshot.data();
+
+            debugPrint(
+              '[FirestoreService] Données compteur : $data',
+            );
+
+            dernierNumero =
+                (data?['dernier_numero'] as num?)?.toInt() ?? 0;
+          }
+
+          final nouveauNumero =
+              dernierNumero + 1;
+
+          debugPrint(
+            '[FirestoreService] Nouveau numéro : $nouveauNumero',
+          );
+
+          transaction.set(
+            compteurReference,
+            {
+              'dernier_numero': nouveauNumero,
+            },
+            SetOptions(merge: true),
+          );
+
+          final maintenant = DateTime.now();
+
+          final date =
+              '${maintenant.year.toString().padLeft(4, '0')}'
+              '${maintenant.month.toString().padLeft(2, '0')}'
+              '${maintenant.day.toString().padLeft(2, '0')}';
+
+          final numeroMatch =
+              'M-$date-${nouveauNumero.toString().padLeft(3, '0')}';
+
+          debugPrint(
+            '[FirestoreService] Numéro généré : $numeroMatch',
+          );
+
+          return numeroMatch;
+        },
+      );
+    }  catch (e, stackTrace) {
+  debugPrint(
+  '[FirestoreService] ERREUR type : ${e.runtimeType}',
+  );
+
+  debugPrint(
+  '[FirestoreService] ERREUR toString : $e',
+  );
+
+  debugPrint(
+  '[FirestoreService] ERREUR stack : $stackTrace',
+  );
+
+  rethrow;
+
+    }
   }
+
+
+  static Future<void> testerCompteurMatch() async {
+    final compteurReference = _db
+        .collection('configuration')
+        .doc('numero_match_manuel');
+
+    try {
+      debugPrint('[TEST] Début lecture compteur');
+
+      final snapshot =
+      await compteurReference.get();
+
+      debugPrint(
+        '[TEST] Lecture OK : exists=${snapshot.exists}',
+      );
+
+      debugPrint(
+        '[TEST] Données : ${snapshot.data()}',
+      );
+    } catch (e, stackTrace) {
+      debugPrint(
+        '[TEST] ERREUR : $e',
+      );
+
+      debugPrint(
+        '[TEST] TYPE : ${e.runtimeType}',
+      );
+
+      debugPrint(
+        '[TEST] STACK : $stackTrace',
+      );
+
+      rethrow;
+    }
+  }
+
 }
 
 
