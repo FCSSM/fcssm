@@ -50,6 +50,8 @@ class _PlanningPageState extends State<PlanningPage> {
       .now()
       .weekNumber;
 
+  DateTime dateSemaineSelectionnee = DateTime.now();
+
   bool uniquementDomicile = false;
 
   String formatDate(DateTime date) {
@@ -432,10 +434,15 @@ class _PlanningPageState extends State<PlanningPage> {
   }
 
   void semaineSuivante() {
-    setState(() {
-      semaineSelectionnee++;
-    });
-    actualiserMatchsSemaine();
+      setState(() {
+        dateSemaineSelectionnee =
+            dateSemaineSelectionnee.add(const Duration(days: 7));
+
+        semaineSelectionnee =
+            numeroSemaine(dateSemaineSelectionnee);
+      });
+
+      actualiserMatchsSemaine();
   }
 
 
