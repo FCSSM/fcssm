@@ -898,6 +898,10 @@ class _PlanningPageState extends State<PlanningPage> {
     final terrains =
     await TerrainService.chargerTerrains();
 
+    if (!mounted) {
+      return;
+    }
+
     String formatDate2(DateTime date) {
       return DateFormat('dd/MM/yyyy').format(date);
     }
@@ -924,9 +928,7 @@ class _PlanningPageState extends State<PlanningPage> {
       return;
     }
 
-    if (!mounted) {
-      return;
-    }
+
 
     final resultat = await showDialog<MatchFoot>(
       context: context,
