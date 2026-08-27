@@ -33,6 +33,9 @@ jobs:
       - name: Construire l'application Web
         run: flutter build web --release --base-href /fcssm/
 
+      - name: Copier la politique de confidentialité
+        run: cp privacy-policy.html build/web/privacy-policy.html
+
       - name: Configurer GitHub Pages
         uses: actions/configure-pages@v5
 
