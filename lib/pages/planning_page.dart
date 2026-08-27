@@ -99,21 +99,11 @@ class _PlanningPageState extends State<PlanningPage> {
     }
   }
 
-  List<String> get equipesDisponibles {
-    return tousLesMatchs
-        .map((match) => match.equipeLocale)
-        .toSet()
-        .toList()
-      ..sort();
-  }
+  List<String> equipesDisponibles = [];
 
-  List<String> get listeCompetitions {
-    return tousLesMatchs
-        .map((match) => match.competition)
-        .toSet()
-        .toList()
-      ..sort();
-  }
+  List<String> competitionsDisponibles = [];
+
+
 
 
   Widget _buildStatutMatch(MatchFoot match) {
@@ -182,6 +172,9 @@ class _PlanningPageState extends State<PlanningPage> {
   @override
   void initState() {
     super.initState();
+
+    chargerEquipes();
+    chargerCompetitions();
 
     FirebaseAuth.instance.authStateChanges().listen(
           (User? user) async {
@@ -258,7 +251,29 @@ class _PlanningPageState extends State<PlanningPage> {
 
   }
 
+  Future<void> chargerEquipes() async {
+    final equipes = await FirestoreService.chargerEquipes();
 
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      equipesDisponibles = equipes;
+    });
+  }
+
+  Future<void> chargerCompetitions() async {
+    final competitions = await FirestoreService.chargerCompetitions();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      competitionsDisponibles = competitions;
+    });
+  }
 
   int numeroSemaine(DateTime date) {
     final jeudi = date.add(
@@ -862,7 +877,10 @@ class _PlanningPageState extends State<PlanningPage> {
     );
   }
 
+
+
   Future<void> ajouterMatch() async {
+
 
     DateTime? dateMatch;
     TimeOfDay? heureMatch;
@@ -870,7 +888,10 @@ class _PlanningPageState extends State<PlanningPage> {
     String? equipeLocale;
     String? equipeAdverse;
     String? stade;
+    String? ville;
     String? competition;
+
+    bool matchDomicile = true;
 
     final formKey = GlobalKey<FormState>();
 
@@ -879,6 +900,28 @@ class _PlanningPageState extends State<PlanningPage> {
 
     String formatDate2(DateTime date) {
       return DateFormat('dd/MM/yyyy').format(date);
+    }
+
+    if (equipesDisponibles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'La liste des équipes n\'est pas disponible.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (competitionsDisponibles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'La liste des compétitions n\'est pas disponible.',
+          ),
+        ),
+      );
+      return;
     }
 
     if (!mounted) {
@@ -1045,8 +1088,44 @@ class _PlanningPageState extends State<PlanningPage> {
                       // ==================================================
                       // TERRAIN
                       // ==================================================
+                      // ==================================================
+// DOMICILE / EXTÉRIEUR
+// ==================================================
 
-                      DropdownButtonFormField<String>(
+                      DropdownButtonFormField<bool>(
+                        decoration: const InputDecoration(
+                          labelText: 'Lieu du match',
+                          prefixIcon: Icon(Icons.home_outlined),
+                        ),
+
+                        initialValue: matchDomicile,
+
+                        items: const [
+                          DropdownMenuItem(
+                            value: true,
+                            child: Text('Domicile'),
+                          ),
+                          DropdownMenuItem(
+                            value: false,
+                            child: Text('Extérieur'),
+                          ),
+                        ],
+
+                        onChanged: (value) {
+                          if (value == null) return;
+
+                          setDialogState(() {
+                            matchDomicile = value;
+
+                            // On efface les valeurs précédentes
+                            stade = null;
+                            ville = null;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+                     /* DropdownButtonFormField<String>(
                         decoration:
                         const InputDecoration(
                           labelText: 'Terrain',
@@ -1074,7 +1153,87 @@ class _PlanningPageState extends State<PlanningPage> {
                                 value;
                           });
                         },
-                      ),
+                      ),*/
+                      // ==================================================
+// TERRAIN / LIEU
+// ==================================================
+
+                      if (matchDomicile)
+
+                        DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: 'Terrain',
+                            prefixIcon: Icon(Icons.stadium_outlined),
+                          ),
+
+                          items: terrains.map((terrain) {
+                            return DropdownMenuItem<String>(
+                              value: terrain.id,
+                              child: Text(terrain.nom),
+                            );
+                          }).toList(),
+
+                          onChanged: (value) {
+                            setDialogState(() {
+                              stade = value;
+                            });
+                          },
+
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Sélectionnez un terrain';
+                            }
+                            return null;
+                          },
+                        )
+
+                      else
+
+                        Column(
+                          children: [
+
+                            TextFormField(
+                              decoration: const InputDecoration(
+                                labelText: 'Stade / installation',
+                                prefixIcon:
+                                Icon(Icons.stadium_outlined),
+                              ),
+
+                              onChanged: (value) {
+                                stade = value.trim();
+                              },
+
+                              validator: (value) {
+                                if (value == null ||
+                                    value.trim().isEmpty) {
+                                  return 'Saisissez le lieu du match';
+                                }
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            TextFormField(
+                              decoration: const InputDecoration(
+                                labelText: 'Ville',
+                                prefixIcon: Icon(Icons.location_on_outlined),
+                              ),
+
+                              onChanged: (value) {
+                                ville = value.trim();
+                              },
+
+                              validator: (value) {
+                                if (value == null ||
+                                    value.trim().isEmpty) {
+                                  return 'Saisissez la ville';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
 
                       const SizedBox(height: 16),
 
@@ -1088,7 +1247,7 @@ class _PlanningPageState extends State<PlanningPage> {
                         ),
                         initialValue: competition,
                         isExpanded: true,
-                        items: listeCompetitions.map((competition) {
+                        items: competitionsDisponibles.map((competition) {
                           return DropdownMenuItem<String>(
                             value: competition,
                             child: Text(competition),
@@ -1140,16 +1299,49 @@ class _PlanningPageState extends State<PlanningPage> {
                     // RECHERCHE DU TERRAIN SELECTIONE
                     // ============================================================
 
-                    Terrain? terrainSelectionne;
+                   /* Terrain? terrainSelectionne;
 
                     for (final terrain in terrains) {
                       if (terrain.id == stade) {
                         terrainSelectionne = terrain;
                         break;
                       }
+                    }*/
+
+                    Terrain? terrainSelectionne;
+
+                    if (matchDomicile) {
+                      for (final terrain in terrains) {
+                        if (terrain.id == stade) {
+                          terrainSelectionne = terrain;
+                          break;
+                        }
+                      }
                     }
 
                     final nouveauMatch = MatchFoot(
+                      numeroMatch: '1',
+                      equipeLocale: equipeLocale!,
+                      recevant: matchDomicile ? 'oui' : 'non',
+                      dateMatch: formatDate2(dateMatch!),
+                      heureMatch: formatHeure(heureMatch!),
+                      equipeAdverse: equipeAdverse!.trim(),
+
+                      stade: matchDomicile
+                          ? terrainSelectionne?.nom ?? ''
+                          : stade ?? '',
+
+                      phase: 'aller',
+
+                      ville: matchDomicile
+                          ? terrainSelectionne?.ville ?? ''
+                          : ville ?? '',
+
+                      competition: competition!,
+                      noSemaine: numeroSemaine(dateMatch!),
+                      modification: '',
+                    );
+                   /* final nouveauMatch = MatchFoot(
                       numeroMatch: '',
                       equipeLocale: equipeLocale!,
                       recevant: 'oui',
@@ -1162,7 +1354,7 @@ class _PlanningPageState extends State<PlanningPage> {
                       competition: competition!,
                       noSemaine: numeroSemaine(dateMatch!),
                       modification: '',
-                    );
+                    );*/
 
                     Navigator.pop(context, nouveauMatch);
 
@@ -1418,8 +1610,237 @@ class _PlanningPageState extends State<PlanningPage> {
             // ---------------------------------------------------
             // CARD DU MATCH
             // ---------------------------------------------------
-
             Card(
+              margin: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+              color: couleurMatch(match.couleur),
+              elevation: 1,
+
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+
+                onTap:
+                match.modification != null &&
+                    match.modification!.trim().isNotEmpty
+                    ? () => _afficherModification(match)
+                    : null,
+
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
+
+                  child: Column(
+                    crossAxisAlignment:
+                    CrossAxisAlignment.start,
+
+                    children: [
+
+                      // ===============================================================
+                      // HEURE + COMPÉTITION
+                      // ===============================================================
+
+                      Row(
+                        children: [
+
+                          const Icon(
+                            Icons.access_time,
+                            size: 16,
+                          ),
+
+                          const SizedBox(width: 5),
+
+                          Text(
+                            match.heureMatch,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          const Icon(
+                            Icons.emoji_events_outlined,
+                            size: 15,
+                          ),
+
+                          const SizedBox(width: 5),
+
+                          Expanded(
+                            child: Text(
+                              match.competition.trim().isEmpty
+                                  ? '-'
+                                  : match.competition,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+
+                          // =========================================================
+                          // ⚠️ MODIFICATION
+                          // =========================================================
+
+                          if (match.modification != null &&
+                              match.modification!.trim().isNotEmpty &&
+                              (match.statut == null ||
+                                  match.statut ==
+                                      MatchFoot.statutNormal))
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.white,
+                                size: 21,
+                              ),
+                            ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // ===============================================================
+                      // ÉQUIPES
+                      // ===============================================================
+
+                      Text(
+                        '${match.equipeLocale} - '
+                            '${match.equipeAdverse}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // ===============================================================
+                      // STATUT
+                      // ===============================================================
+
+                      _buildStatutMatch(match),
+
+                      // ===============================================================
+                      // STADE / VILLE
+                      // ===============================================================
+
+                      if (match.stade.trim().isNotEmpty ||
+                          match.ville.trim().isNotEmpty)
+
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: 3,
+                          ),
+
+                          child: Row(
+                            children: [
+
+                              const Icon(
+                                Icons.stadium_outlined,
+                                size: 15,
+                              ),
+
+                              const SizedBox(width: 5),
+
+                              Expanded(
+                                child: Text(
+                                  [
+                                    if (match.stade
+                                        .trim()
+                                        .isNotEmpty)
+                                      match.stade,
+
+                                    if (match.ville
+                                        .trim()
+                                        .isNotEmpty)
+                                      match.ville,
+                                  ].join(' - '),
+
+                                  maxLines: 1,
+                                  overflow:
+                                  TextOverflow.ellipsis,
+
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // ===============================================================
+                      // ADMINISTRATION
+                      // ===============================================================
+
+                      if (isAdmin)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: 3,
+                          ),
+
+                          child: Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.end,
+
+                            children: [
+
+                              // Modifier
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  size: 19,
+                                ),
+                                tooltip: 'Modifier le match',
+                                visualDensity:
+                                VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints:
+                                const BoxConstraints(
+                                  minWidth: 36,
+                                  minHeight: 36,
+                                ),
+                                onPressed: () {
+                                  _modifierMatch(match);
+                                },
+                              ),
+
+                              // Supprimer
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 20,
+                                ),
+                                tooltip: 'Supprimer le match',
+                                visualDensity:
+                                VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints:
+                                const BoxConstraints(
+                                  minWidth: 36,
+                                  minHeight: 36,
+                                ),
+                                onPressed: () {
+                                  supprimerMatch(match);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+       /*     Card(
               color: couleurMatch(match.couleur),
               margin: const EdgeInsets.symmetric(
                 horizontal: 8,
@@ -1583,7 +2004,7 @@ class _PlanningPageState extends State<PlanningPage> {
                   ),
                 ),
               ),
-            ),
+            ),*/
           ],
         );
       },

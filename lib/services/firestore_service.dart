@@ -594,6 +594,184 @@ class FirestoreService {
     }
   }
 
+  static Future<List<String>> chargerEquipes() async {
+    try {
+      final snapshot = await _db
+          .collection('configuration')
+          .doc('equipes')
+          .get();
+
+      if (!snapshot.exists) {
+        debugPrint(
+          '[FirestoreService] Configuration équipes inexistante',
+        );
+        return [];
+      }
+
+      final data = snapshot.data();
+      final liste = data?['liste'];
+
+      if (liste is! List) {
+        debugPrint(
+          '[FirestoreService] Champ "liste" invalide',
+        );
+        return [];
+      }
+
+      final equipes = liste
+          .whereType<String>()
+          .map((equipe) => equipe.trim())
+          .where((equipe) => equipe.isNotEmpty)
+          .toList();
+
+      equipes.sort();
+
+      debugPrint(
+        '[FirestoreService] ${equipes.length} équipes chargées',
+      );
+
+      return equipes;
+    } catch (e, stack) {
+      debugPrint(
+        '[FirestoreService] Erreur chargement équipes : $e',
+      );
+      debugPrint(
+        '[FirestoreService] STACK : $stack',
+      );
+
+      return [];
+    }
+  }
+
+  static Future<List<String>> chargerCompetitions() async {
+    try {
+      final snapshot = await _db
+          .collection('configuration')
+          .doc('competitions')
+          .get();
+
+      if (!snapshot.exists) {
+        debugPrint(
+          '[FirestoreService] Configuration compétitions inexistante',
+        );
+        return [];
+      }
+
+      final data = snapshot.data();
+      final liste = data?['liste'];
+
+      if (liste is! List) {
+        debugPrint(
+          '[FirestoreService] Champ "liste" invalide',
+        );
+        return [];
+      }
+
+      final competitions = liste
+          .whereType<String>()
+          .map((competition) => competition.trim())
+          .where((competition) => competition.isNotEmpty)
+          .toList();
+
+      competitions.sort();
+
+      debugPrint(
+        '[FirestoreService] ${competitions.length} competitions chargées',
+      );
+
+      return competitions;
+    } catch (e, stack) {
+      debugPrint(
+        '[FirestoreService] Erreur chargement competitions : $e',
+      );
+      debugPrint(
+        '[FirestoreService] STACK : $stack',
+      );
+
+      return [];
+    }
+  }
+
+  static Future<void> initialiserEquipes() async {
+    final equipes = [
+      'Seniors A',
+      'Seniors B',
+      'Seniors C',
+      'Seniors F',
+      'Vétéran A',
+      'Vétéran B',
+      'U18',
+      'U17',
+      'U15 A',
+      'U15 B',
+      'U14',
+      'U13 A',
+      'U13 B',
+      'U12',
+      'U13 F',
+      'U15 F',
+    ];
+
+    await _db
+        .collection('configuration')
+        .doc('equipes')
+        .set({
+      'liste': equipes,
+    });
+
+    debugPrint(
+      '[FirestoreService] Liste des équipes initialisée',
+    );
+  }
+  static Future<void> initialisercompetitions() async {
+    final competitions = [
+      'Match amical',
+      'Challenge Du District',
+      'Coupe De France',
+      'Coupe De La Sarthe',
+      'Coupe Du District',
+      'Coupe Gambardella',
+      'Coupe Pays De La Loire',
+      'Coupe Vétéran Baudron',
+      'Coupe Vétéran Maubon',
+      'Division 1',
+      'Division 2',
+      'Division 3',
+      'Play Off',
+      'Régional 2',
+      'U12 Division 1 / 1',
+      'U12 Division 2 / 2',
+      'U13 Division 1 / 1',
+      'U13 Division 1 / 2',
+      'U13 Division 2 / 2',
+      'U13 Division 3 / 1',
+      'U13F - Division 1 / 2',
+      'U14 Interdistrict / 1',
+      'U15 Division 1 / 1',
+      'U15 Division 1 / 2',
+      'U15 Division 3 / 1',
+      'U15 Division 3 / 2',
+      'U15F À 8 / Phase 1',
+      'U15F À 8 / Phase 2',
+      'U17 Division 1 / 1',
+      'U17 Division 1 / 2',
+      'U18 Division 1 / 1',
+      'U18 Division 1 / 2',
+    ];
+
+    await _db
+        .collection('configuration')
+        .doc('competitions')
+        .set({
+      'liste': competitions,
+    });
+
+    debugPrint(
+      '[FirestoreService] Liste des competitions initialisée',
+    );
+  }
+
+
 }
 
 
