@@ -726,6 +726,7 @@ class _ImpressionPageState extends State<ImpressionPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 5),
 
             Row(
               children: [
