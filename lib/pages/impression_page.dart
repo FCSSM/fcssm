@@ -417,12 +417,12 @@ class _ImpressionPageState extends State<ImpressionPage> {
             const Text(
               "Type de planning",
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 5),
 
             SegmentedButton<bool>(
               segments: const [
@@ -454,17 +454,17 @@ class _ImpressionPageState extends State<ImpressionPage> {
             // ==========================================
 
             if (modeMensuel) ...[
-              const SizedBox(height: 30),
+              const SizedBox(height: 10),
 
               const Text(
                 "Mois",
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 5),
 
               DropdownButtonFormField<int>(
                 initialValue: moisSelectionne,
@@ -497,11 +497,7 @@ class _ImpressionPageState extends State<ImpressionPage> {
               ),
             ],
 
-            const SizedBox(height: 30),
-
-            const Divider(),
-
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
 
             // ==========================================
             // LIEU
@@ -510,12 +506,12 @@ class _ImpressionPageState extends State<ImpressionPage> {
             const Text(
               "Lieu des matchs",
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 2),
 
             SegmentedButton<int>(
               segments: const [
@@ -543,16 +539,17 @@ class _ImpressionPageState extends State<ImpressionPage> {
             // ==========================================
             // JOUR
             // ==========================================
+            const SizedBox(height: 10),
 
             const Text(
               "Jour des matchs",
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 5),
 
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
@@ -563,10 +560,10 @@ class _ImpressionPageState extends State<ImpressionPage> {
                 "Dimanche uniquement",
               ),
 
-              subtitle: const Text(
+            /*  subtitle: const Text(
                 "Afficher uniquement les matchs du dimanche",
               ),
-
+            */
               secondary: const Icon(
                 Icons.event,
               ),
@@ -579,7 +576,7 @@ class _ImpressionPageState extends State<ImpressionPage> {
               },
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 5),
 
             // ==========================================
             // EQUIPES
@@ -588,7 +585,7 @@ class _ImpressionPageState extends State<ImpressionPage> {
             const Text(
               "Équipes",
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -602,7 +599,7 @@ class _ImpressionPageState extends State<ImpressionPage> {
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 5),
 
             Card(
               child: equipesDisponibles.isEmpty
@@ -615,7 +612,15 @@ class _ImpressionPageState extends State<ImpressionPage> {
                   : Column(
                 children: equipesDisponibles.map((equipe) {
                   return CheckboxListTile(
-                    title: Text(equipe),
+
+                    dense: true,
+                    //contentPadding: EdgeInsets.zero,
+
+                    title: Text(equipe,
+                      style: const TextStyle(
+                        fontSize: 14,
+                      ),
+                    ),
 
                     value: equipesSelectionnees.contains(equipe),
 
@@ -634,7 +639,7 @@ class _ImpressionPageState extends State<ImpressionPage> {
               ),
             ),
 
-            const SizedBox(height: 30),
+ /*           const SizedBox(height: 30),
 
             const Divider(),
 
@@ -698,8 +703,8 @@ class _ImpressionPageState extends State<ImpressionPage> {
                 ),
               ),
             ),
-
-            const SizedBox(height: 20),
+          */
+            const SizedBox(height: 5),
 
             Card(
               child: Padding(
@@ -738,7 +743,7 @@ class _ImpressionPageState extends State<ImpressionPage> {
                       size: 18,
                     ),
                     label: const Text(
-                      'PDF\nAperçu',
+                      'Aperçu',
                       textAlign: TextAlign.center,
                     ),
                     style: FilledButton.styleFrom(
@@ -767,7 +772,7 @@ class _ImpressionPageState extends State<ImpressionPage> {
                         size: 18,
                       ),
                       label: const Text(
-                        'PDF\nPartager',
+                        'PDF',
                         textAlign: TextAlign.center,
                       ),
                       style: OutlinedButton.styleFrom(
@@ -796,9 +801,7 @@ class _ImpressionPageState extends State<ImpressionPage> {
                           size: 18
                     ),
                     label: Text(
-                      kIsWeb
-                          ? 'Excel'
-                          : 'Excel\nPartager',
+                      'Excel',
                       textAlign: TextAlign.center,
                     ),
 
@@ -812,42 +815,6 @@ class _ImpressionPageState extends State<ImpressionPage> {
                 ),
               ],
             )
-
-       /*     const SizedBox(height: 20),
-
-            SizedBox(
-              width: double.infinity,
-
-              child: FilledButton.icon(
-
-                icon: const Icon(
-                  Icons.picture_as_pdf,
-                ),
-
-                label: const Text(
-                  "Exporter en PDF",
-                ),
-
-                onPressed: matchsFiltres.isEmpty
-                    ? null
-                    : () async {
-
-                  final titre = modeMensuel
-                      ? "Planning des rencontres"
-                      : "Planning annuel";
-
-                  final sousTitre = modeMensuel
-                      ? mois[moisSelectionne - 1]
-                      : "Toutes les rencontres";
-
-                  await PdfService.exporterPlanning(
-                    matchs: matchsFiltres,
-                    titre: titre,
-                    sousTitre: sousTitre,
-                  );
-                },
-              ),
-            ),*/
           ],
         ),
       ),

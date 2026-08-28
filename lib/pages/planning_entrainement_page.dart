@@ -399,7 +399,113 @@ class _PlanningEntrainementPageState
   // CARD D'UNE SÉANCE
   // ===========================================================================
 
+
   Widget _buildEntrainementCard(
+      Entrainement entrainement, {
+        bool afficherJourDansCarte = false,
+      }) {
+    final String informationPrincipale =
+    afficherJourDansCarte
+        ? entrainement.jour
+        : entrainement.categorie;
+
+    return Card(
+      color: couleurEntrainement(entrainement.lieu),
+      margin: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 9,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            // ===============================================================
+            // HORAIRE + CATÉGORIE / JOUR
+            // ===============================================================
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+
+                // -----------------------------------------------------------
+                // HORAIRE
+                // -----------------------------------------------------------
+
+                Flexible(
+                  flex: 0,
+                  child: Text(
+                    entrainement.horaire,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.visible,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 14),
+
+                // -----------------------------------------------------------
+                // CATÉGORIE / JOUR
+                // -----------------------------------------------------------
+
+                Expanded(
+                  child: Text(
+                    informationPrincipale,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 4),
+
+            // ===============================================================
+            // LIEU
+            // ===============================================================
+
+            Row(
+              children: [
+
+                const Icon(
+                  Icons.stadium_outlined,
+                  size: 15,
+                ),
+
+                const SizedBox(width: 5),
+
+                Expanded(
+                  child: Text(
+                    entrainement.lieu,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+/*  Widget _buildEntrainementCard(
+
       Entrainement entrainement, {
         bool afficherJourDansCarte = false,
       }) {
@@ -475,7 +581,7 @@ class _PlanningEntrainementPageState
         ),
       ),
     );
-  }
+  }*/
 
   // ===========================================================================
   // COULEUR SELON LE LIEU
