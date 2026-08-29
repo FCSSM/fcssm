@@ -404,6 +404,7 @@ class _PlanningEntrainementPageState
       Entrainement entrainement, {
         bool afficherJourDansCarte = false,
       }) {
+
     final String informationPrincipale =
     afficherJourDansCarte
         ? entrainement.jour
@@ -504,84 +505,8 @@ class _PlanningEntrainementPageState
     );
   }
 
-/*  Widget _buildEntrainementCard(
 
-      Entrainement entrainement, {
-        bool afficherJourDansCarte = false,
-      }) {
-    final String informationPrincipale =
-    afficherJourDansCarte
-        ? entrainement.jour
-        : entrainement.categorie;
 
-    return Card(
-      color: couleurEntrainement(entrainement.lieu),
-      margin: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 4,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-        child: Row(
-          children: [
-            // ---------------------------------------------------------------
-            // HORAIRE
-            // ---------------------------------------------------------------
-
-            SizedBox(
-              width: 95,
-              child: Text(
-                entrainement.horaire,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            // ---------------------------------------------------------------
-            // CATÉGORIE OU JOUR
-            // ---------------------------------------------------------------
-
-            Expanded(
-              flex: 2,
-              child: Text(
-                informationPrincipale,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            // ---------------------------------------------------------------
-            // LIEU
-            // ---------------------------------------------------------------
-
-            Expanded(
-              flex: 2,
-              child: Text(
-                entrainement.lieu,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                  fontSize: 14,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }*/
 
   // ===========================================================================
   // COULEUR SELON LE LIEU

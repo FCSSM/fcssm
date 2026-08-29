@@ -595,26 +595,29 @@ class _PlanningEquipesState
   Widget build(
       BuildContext context,
       ) {
+    Widget body;
+
+    // ============================================================
+    // CHARGEMENT
+    // ============================================================
 
     if (_chargement) {
-
-      return const Center(
-        child:
-        CircularProgressIndicator(),
+      body = const Center(
+        child: CircularProgressIndicator(),
       );
     }
 
-    if (_erreur != null) {
+    // ============================================================
+    // ERREUR
+    // ============================================================
 
-      return Center(
+    else if (_erreur != null) {
+      body = Center(
         child: Padding(
-          padding:
-          const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
           child: Column(
-            mainAxisSize:
-            MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
             children: [
-
               const Icon(
                 Icons.error_outline,
                 size: 50,
@@ -624,21 +627,17 @@ class _PlanningEquipesState
 
               Text(
                 _erreur!,
-                textAlign:
-                TextAlign.center,
+                textAlign: TextAlign.center,
               ),
 
               const SizedBox(height: 16),
 
               ElevatedButton.icon(
-                onPressed:
-                _chargerPlanning,
-                icon:
-                const Icon(
+                onPressed: _chargerPlanning,
+                icon: const Icon(
                   Icons.refresh,
                 ),
-                label:
-                const Text(
+                label: const Text(
                   'Réessayer',
                 ),
               ),
@@ -648,14 +647,15 @@ class _PlanningEquipesState
       );
     }
 
-    if (_tousLesMatchs.isEmpty) {
+    // ============================================================
+    // AUCUN MATCH DANS LE PLANNING
+    // ============================================================
 
-      return Center(
+    else if (_tousLesMatchs.isEmpty) {
+      body = Center(
         child: Column(
-          mainAxisSize:
-          MainAxisSize.min,
+          mainAxisSize: MainAxisSize.min,
           children: [
-
             const Icon(
               Icons.calendar_month_outlined,
               size: 60,
@@ -670,14 +670,11 @@ class _PlanningEquipesState
             const SizedBox(height: 16),
 
             ElevatedButton.icon(
-              onPressed:
-              _chargerPlanning,
-              icon:
-              const Icon(
+              onPressed: _chargerPlanning,
+              icon: const Icon(
                 Icons.refresh,
               ),
-              label:
-              const Text(
+              label: const Text(
                 'Actualiser',
               ),
             ),
@@ -686,76 +683,271 @@ class _PlanningEquipesState
       );
     }
 
-    final matchs =
-        _matchsEquipe;
+    // ============================================================
+    // PLANNING
+    // ============================================================
 
-    return RefreshIndicator(
-      onRefresh:
-      _chargerPlanning,
-      child: CustomScrollView(
-        physics:
-        const AlwaysScrollableScrollPhysics(),
-        slivers: [
+    else {
+      final matchs = _matchsEquipe;
 
-          // -------------------------------------------------------------------
-          // SÉLECTION DE L'ÉQUIPE
-          // -------------------------------------------------------------------
+      body = RefreshIndicator(
+        onRefresh: _chargerPlanning,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
 
-          SliverToBoxAdapter(
-            child: Padding(
-              padding:
-              const EdgeInsets.all(12),
-              child:
-              _buildHeader(),
+            // -----------------------------------------------------
+            // SÉLECTION DE L'ÉQUIPE
+            // -----------------------------------------------------
+
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: _buildHeader(),
+              ),
             ),
+
+            // -----------------------------------------------------
+            // AUCUN MATCH POUR CETTE ÉQUIPE
+            // -----------------------------------------------------
+
+            if (matchs.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Text(
+                    'Aucun match pour cette équipe.',
+                  ),
+                ),
+              )
+
+            // -----------------------------------------------------
+            // LISTE DES MATCHS
+            // -----------------------------------------------------
+
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  12,
+                  0,
+                  12,
+                  20,
+                ),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                      return _buildMatchCard(
+                        matchs[index],
+                      );
+                    },
+                    childCount: matchs.length,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
+    // ============================================================
+    // AFFICHAGE
+    // ============================================================
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Image.asset(
+            'assets/images/logo_club.png',
+            fit: BoxFit.contain,
           ),
-
-          // -------------------------------------------------------------------
-          // AUCUN MATCH
-          // -------------------------------------------------------------------
-
-          if (matchs.isEmpty)
-
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Text(
-                  'Aucun match pour cette équipe.',
-                ),
-              ),
-            )
-
-          // -------------------------------------------------------------------
-          // LISTE DES MATCHS
-          // -------------------------------------------------------------------
-
-          else
-
-            SliverPadding(
-              padding:
-              const EdgeInsets.fromLTRB(
-                12,
-                0,
-                12,
-                20,
-              ),
-              sliver:
-              SliverList(
-                delegate:
-                SliverChildBuilderDelegate(
-                      (context, index) {
-
-                    return _buildMatchCard(
-                      matchs[index],
-                    );
-                  },
-                  childCount:
-                  matchs.length,
-                ),
-              ),
-            ),
-        ],
+        ),
+        title: const Text(
+          "Planning équipes",
+        ),
       ),
+
+      body: body,
     );
   }
+
+/*Widget build(
+      BuildContext context,
+      ) {
+    return Scaffold(
+        appBar: AppBar(
+          leading: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Image.asset(
+              'assets/images/logo_club.png',
+              fit: BoxFit.contain,
+            ),
+          ),
+          title: Text("Planning équipes"),
+
+        ),
+        body:
+        if (_chargement) {
+
+            return const Center(
+              child:
+              CircularProgressIndicator(),
+            );
+          }
+
+          if (_erreur != null) {
+
+            return Center(
+              child: Padding(
+                padding:
+                const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize:
+                  MainAxisSize.min,
+                  children: [
+
+                    const Icon(
+                      Icons.error_outline,
+                      size: 50,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    Text(
+                      _erreur!,
+                      textAlign:
+                      TextAlign.center,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    ElevatedButton.icon(
+                      onPressed:
+                      _chargerPlanning,
+                      icon:
+                      const Icon(
+                        Icons.refresh,
+                      ),
+                      label:
+                      const Text(
+                        'Réessayer',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          if (_tousLesMatchs.isEmpty) {
+
+            return Center(
+              child: Column(
+                mainAxisSize:
+                MainAxisSize.min,
+                children: [
+
+                  const Icon(
+                    Icons.calendar_month_outlined,
+                    size: 60,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  const Text(
+                    'Aucun match dans le planning.',
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  ElevatedButton.icon(
+                    onPressed:
+                    _chargerPlanning,
+                    icon:
+                    const Icon(
+                      Icons.refresh,
+                    ),
+                    label:
+                    const Text(
+                      'Actualiser',
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final matchs =
+              _matchsEquipe;
+
+          return RefreshIndicator(
+            onRefresh:
+            _chargerPlanning,
+            child: CustomScrollView(
+              physics:
+              const AlwaysScrollableScrollPhysics(),
+              slivers: [
+
+                // -------------------------------------------------------------------
+                // SÉLECTION DE L'ÉQUIPE
+                // -------------------------------------------------------------------
+
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding:
+                    const EdgeInsets.all(12),
+                    child:
+                    _buildHeader(),
+                  ),
+                ),
+
+                // -------------------------------------------------------------------
+                // AUCUN MATCH
+                // -------------------------------------------------------------------
+
+                if (matchs.isEmpty)
+
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Text(
+                        'Aucun match pour cette équipe.',
+                      ),
+                    ),
+                  )
+
+                // -------------------------------------------------------------------
+                // LISTE DES MATCHS
+                // -------------------------------------------------------------------
+
+                else
+
+                  SliverPadding(
+                    padding:
+                    const EdgeInsets.fromLTRB(
+                      12,
+                      0,
+                      12,
+                      20,
+                    ),
+                    sliver:
+                    SliverList(
+                      delegate:
+                      SliverChildBuilderDelegate(
+                            (context, index) {
+
+                          return _buildMatchCard(
+                            matchs[index],
+                          );
+                        },
+                        childCount:
+                        matchs.length,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+    );
+  }*/
 }

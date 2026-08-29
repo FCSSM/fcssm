@@ -103,9 +103,6 @@ class _PlanningPageState extends State<PlanningPage> {
 
   List<String> competitionsDisponibles = [];
 
-
-
-
   Widget _buildStatutMatch(MatchFoot match) {
     String? texte;
     IconData? icone;
@@ -378,7 +375,6 @@ class _PlanningPageState extends State<PlanningPage> {
   }
 
   Future<void> _actualiserPlanning(
-
       String jsonString,
       int semaine,
       ) async {
@@ -388,7 +384,6 @@ class _PlanningPageState extends State<PlanningPage> {
           .cast<Map<String, dynamic>>()
           .map(MatchFoot.fromJson)
           .toList();
-
       // On vérifie que le State existe toujours avant setState.
       // C'est particulièrement important après un await.
       if (!mounted) {
@@ -440,26 +435,32 @@ class _PlanningPageState extends State<PlanningPage> {
   }
 
   void semainePrecedente() {
-    if (semaineSelectionnee > 1) {
-      setState(() {
-        semaineSelectionnee--;
-      });
-      actualiserMatchsSemaine();
-    }
+    setState(() {
+      dateSemaineSelectionnee =
+          dateSemaineSelectionnee.subtract(
+            const Duration(days: 7),
+          );
+
+      semaineSelectionnee =
+          numeroSemaine(dateSemaineSelectionnee);
+    });
+
+    actualiserMatchsSemaine();
   }
 
   void semaineSuivante() {
-      setState(() {
-        dateSemaineSelectionnee =
-            dateSemaineSelectionnee.add(const Duration(days: 7));
+    setState(() {
+      dateSemaineSelectionnee =
+          dateSemaineSelectionnee.add(
+            const Duration(days: 7),
+          );
 
-        semaineSelectionnee =
-            numeroSemaine(dateSemaineSelectionnee);
-      });
+      semaineSelectionnee =
+          numeroSemaine(dateSemaineSelectionnee);
+    });
 
-      actualiserMatchsSemaine();
+    actualiserMatchsSemaine();
   }
-
 
   Future<void> _modifierMatch(MatchFoot match) async {
     // ============================================================
@@ -1842,171 +1843,6 @@ class _PlanningPageState extends State<PlanningPage> {
                 ),
               ),
             )
-       /*     Card(
-              color: couleurMatch(match.couleur),
-              margin: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
-              ),
-
-              child: ListTile(
-                dense: true,
-
-                // -------------------------------------------------
-                // Appui sur le match
-                // -------------------------------------------------
-
-                onTap:
-                match.modification != null &&
-                    match.modification!
-                        .trim()
-                        .isNotEmpty
-                    ? () => _afficherModification(match)
-                    : null,
-
-                // -------------------------------------------------
-                // HEURE
-                // -------------------------------------------------
-
-                leading: Text(
-                  match.heureMatch,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-
-                // -------------------------------------------------
-                // ÉQUIPES + STATUT
-                // -------------------------------------------------
-
-                title: Column(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.start,
-
-                  mainAxisSize:
-                  MainAxisSize.min,
-
-                  children: [
-                    Row(
-                      children: [
-
-                        Expanded(
-                          child: Text(
-                            '${match.equipeLocale} - '
-                                '${match.equipeAdverse}',
-                            maxLines: 1,
-                            overflow:
-                            TextOverflow.ellipsis,
-                            style:
-                            const TextStyle(
-                              fontWeight:
-                              FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-
-                        // -----------------------------------------
-                        // ⚠️ Modification
-                        // -----------------------------------------
-
-                        if (match.modification != null &&
-                            match.modification!
-                                .trim()
-                                .isNotEmpty &&
-                            (match.statut == null ||
-                                match.statut ==
-                                    MatchFoot.statutNormal))
-                          const Padding(
-                            padding:
-                            EdgeInsets.only(left: 6),
-                            child: Icon(
-                              Icons
-                                  .warning_amber_rounded,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                          ),
-                      ],
-                    ),
-
-                    // -----------------------------------------
-                    // STATUT
-                    // -----------------------------------------
-
-                    _buildStatutMatch(match),
-                  ],
-                ),
-
-                // -------------------------------------------------
-                // STADE - VILLE
-                // -------------------------------------------------
-
-                subtitle: Text(
-                  '${match.stade} - ${match.ville}',
-                  maxLines: 1,
-                  overflow:
-                  TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                  ),
-                ),
-
-                // -------------------------------------------------
-                // ADMINISTRATION
-                // -------------------------------------------------
-
-                trailing: isAdmin
-                    ? Row(
-                  mainAxisSize:
-                  MainAxisSize.min,
-                  children: [
-
-                    // Compétition
-                    Text(
-                      match.competition,
-                      style:
-                      const TextStyle(
-                        fontSize: 11,
-                      ),
-                    ),
-
-                    // Modifier
-                    IconButton(
-                      icon: const Icon(
-                        Icons.edit,
-                        size: 20,
-                      ),
-                      tooltip:
-                      'Modifier le match',
-                      onPressed: () {
-                        _modifierMatch(match);
-                      },
-                    ),
-
-                    // Supprimer
-                    IconButton(
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        size: 20,
-                      ),
-                      tooltip:
-                      'Supprimer le match',
-                      onPressed: () =>
-                          supprimerMatch(match),
-                    ),
-                  ],
-                )
-                    : Text(
-                  match.competition,
-                  style:
-                  const TextStyle(
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            ),*/
           ],
         );
       },
@@ -2075,7 +1911,7 @@ class _PlanningPageState extends State<PlanningPage> {
         ),
 
         title: Text(
-          "Planning - Semaine $semaineSelectionnee",
+          "Planning semaine $semaineSelectionnee",
           overflow: TextOverflow.ellipsis,
         ),
 
