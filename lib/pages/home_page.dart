@@ -1,11 +1,15 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import '../models/utilisateur.dart';
 import '../services/planning_service.dart';
+import '../services/auth_service.dart';
+
 import 'planning_page.dart';
 import 'impression_page.dart';
 import 'planning_entrainement_page.dart';
 import 'planning_equipes.dart';
 import 'administration_page.dart';
+import 'login_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,36 +20,100 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int index = 0;
-  bool isAdmin = false;
 
-  @override
-  void initState() {
-    super.initState();
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if (!mounted) return;
-      setState(() {
-        isAdmin = user != null;
-      });
+  final AuthService _authService = AuthService();
+  Utilisateur? utilisateurConnecte;
+
+  // ---------------------------------------------------------------------------
+  // INITIALISATION
+  // ---------------------------------------------------------------------------
+
+
+
+  // ---------------------------------------------------------------------------
+  // CHARGER L'UTILISATEUR DÉJÀ CONNECTÉ
+  // ---------------------------------------------------------------------------
+
+  Future<void> _chargerUtilisateurConnecte() async {
+    final utilisateur =
+    await _authService.utilisateurConnecte();
+
+    if (!mounted) return;
+
+    setState(() {
+      utilisateurConnecte = utilisateur;
     });
-    PlanningService.demarrerSurveillancePlanning();
   }
 
-  void _adminConnecte() {
+  // ---------------------------------------------------------------------------
+  // CONNEXION
+  // ---------------------------------------------------------------------------
+
+  Future<void> _ouvrirConnexion() async {
+    final Utilisateur? utilisateur = await Navigator.push<Utilisateur>(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+    );
+
+    if (utilisateur == null) {
+      return;
+    }
+
+    if (!mounted) return;
+
     setState(() {
-      isAdmin = true;
+      utilisateurConnecte = utilisateur;
+      index = 0;
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // DÉCONNEXION
+  // ---------------------------------------------------------------------------
+
+  Future<void> _deconnecter() async {
+    await _authService.deconnecter();
+
+    if (!mounted) return;
+
+    setState(() {
+      utilisateurConnecte = null;
       index = 0;
     });
   }
 
   @override
+  void initState() {
+    super.initState();
 
+    _chargerUtilisateurConnecte();
+
+    PlanningService.demarrerSurveillancePlanning();
+  }
+
+  // ---------------------------------------------------------------------------
+  // BUILD
+  // ---------------------------------------------------------------------------
+
+  @override
   Widget build(BuildContext context) {
+    final bool estAdmin = utilisateurConnecte?.estAdmin ?? false;
+
+    final bool peutGererMatchs = utilisateurConnecte?.peutGererMatchs ?? false;
+
     final pages = [
       PlanningPage(
-        onAdminConnecte: _adminConnecte,
+        onAdminConnecte: () {},
+        peutGererMatchs: peutGererMatchs,
+        utilisateurConnecte: utilisateurConnecte,
+        onConnexion: _ouvrirConnexion,
+        onDeconnexion: _deconnecter,
       ),
+
       const PlanningEquipes(),
+
       const PlanningEntrainementPage(),
+
       const ImpressionPage(),
     ];
 
@@ -55,23 +123,19 @@ class _HomePageState extends State<HomePage> {
         label: "Matchs",
       ),
 
-      const NavigationDestination(
-        icon: Icon(Icons.groups),
-        label: "Équipes",
-      ),
+      const NavigationDestination(icon: Icon(Icons.groups), label: "Équipes"),
 
       const NavigationDestination(
         icon: Icon(Icons.calendar_month),
         label: "Entraînements",
       ),
 
-      const NavigationDestination(
-        icon: Icon(Icons.print),
-        label: "Impression",
-      ),
+      const NavigationDestination(icon: Icon(Icons.print), label: "Impression"),
 
-      // Administration uniquement pour les administrateurs
-      if (isAdmin)
+      // ---------------------------------------------------------------
+      // ADMINISTRATION UNIQUEMENT ADMIN
+      // ---------------------------------------------------------------
+      if (estAdmin)
         const NavigationDestination(
           icon: Icon(Icons.admin_panel_settings),
           label: "Admin.",
@@ -79,29 +143,28 @@ class _HomePageState extends State<HomePage> {
         ),
     ];
 
-
     return Scaffold(
-      body: pages[
-      index < pages.length ? index : 0
-      ],
+
+      body: pages[index < pages.length ? index : 0],
 
       bottomNavigationBar: NavigationBar(
-        labelTextStyle: const WidgetStatePropertyAll(
-          TextStyle(
-            fontSize: 11,
-          ),
-        ),
+        labelTextStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 11)),
 
         selectedIndex: index,
 
         onDestinationSelected: (value) {
-          if (isAdmin && value == 4) {
+          // -------------------------------------------------------------
+          // ADMINISTRATION
+          // -------------------------------------------------------------
+
+          if (estAdmin && value == 4) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => const AdministrationPage(),
               ),
             );
+
             return;
           }
 

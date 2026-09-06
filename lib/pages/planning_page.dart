@@ -3,23 +3,32 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:week_number/iso.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
 
 import '../models/match.dart' ;
 import '../models/terrain.dart';
 import '../services/firestore_service.dart';
 import '../services/terrain_service.dart';
 import '../services/planning_service.dart';
-import 'admin_login_page.dart';
-
-
+import '../models/utilisateur.dart';
 
 class PlanningPage extends StatefulWidget {
   final VoidCallback? onAdminConnecte;
+  //final bool peutGererMatchs;
+  final bool peutGererMatchs;
+  final Utilisateur? utilisateurConnecte;
+  final VoidCallback onConnexion;
+  final Future<void> Function() onDeconnexion;
+
 
   const PlanningPage({
     super.key,
-    this.onAdminConnecte
+    required this.onAdminConnecte,
+    required this.peutGererMatchs,
+    required this.utilisateurConnecte,
+    required this.onConnexion,
+    required this.onDeconnexion,
+
   });
 
   @override
@@ -30,8 +39,6 @@ class PlanningPage extends StatefulWidget {
 class _PlanningPageState extends State<PlanningPage> {
 
   StreamSubscription<void>? _planningSubscription;
-
-  bool isAdmin = false;
 
   final PageController _semainePageController =
   PageController(initialPage: 1);
@@ -169,56 +176,8 @@ class _PlanningPageState extends State<PlanningPage> {
   @override
   void initState() {
     super.initState();
-
     chargerEquipes();
     chargerCompetitions();
-
-    FirebaseAuth.instance.authStateChanges().listen(
-          (User? user) async {
-        if (!mounted) return;
-
-        if (user == null) {
-          setState(() {
-            isAdmin = false;
-          });
-          return;
-        }
-
-        try {
-          // Force le rafraîchissement du token afin de récupérer
-          // les dernières custom claims.
-          final idTokenResult =
-          await user.getIdTokenResult(true);
-
-          final admin =
-              idTokenResult.claims?['admin'] == true;
-
-          debugPrint(
-            '[PlanningPage] Utilisateur : ${user.email}',
-          );
-
-          debugPrint(
-            '[PlanningPage] Admin : $admin',
-          );
-
-          if (!mounted) return;
-
-          setState(() {
-            isAdmin = admin;
-          });
-        } catch (e) {
-          debugPrint(
-            '[PlanningPage] Erreur récupération rôle admin : $e',
-          );
-
-          if (!mounted) return;
-
-          setState(() {
-            isAdmin = false;
-          });
-        }
-      },
-    );
 
 
     // Surveillance des modifications du planning
@@ -291,7 +250,7 @@ class _PlanningPageState extends State<PlanningPage> {
   Future<void> choisirDate() async {
     final DateTime? dateChoisie = await showDatePicker(
       context: context,
-      initialDate: dateSelectionnee,
+      initialDate: dateSemaineSelectionnee,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
       locale: const Locale('fr', 'FR'),
@@ -301,14 +260,16 @@ class _PlanningPageState extends State<PlanningPage> {
       return;
     }
 
-    final int semaine = numeroSemaine(dateChoisie);
-    // final int semaine = 33;
     setState(() {
-      dateSelectionnee = dateChoisie;
-      semaineSelectionnee = semaine;
+      // Une seule date de référence
+      dateSemaineSelectionnee = dateChoisie;
+
+      // Numéro de semaine correspondant
+      semaineSelectionnee =
+          numeroSemaine(dateSemaineSelectionnee);
     });
 
-    chargerPlanning(semaine);
+    actualiserMatchsSemaine();
   }
 
   DateTime _parseDateFrancaise(String date) {
@@ -349,7 +310,7 @@ class _PlanningPageState extends State<PlanningPage> {
   }
 
 
-  void actualiserMatchsSemaine() {
+  /*void actualiserMatchsSemaine() {
 
     matchsSemaine = tousLesMatchs.where((match) {
       if (match.noSemaine != semaineSelectionnee) {
@@ -371,6 +332,70 @@ class _PlanningPageState extends State<PlanningPage> {
         return cmp;
       }
       return a.heureEnMinutes.compareTo(b.heureEnMinutes);
+    });
+  }*/
+
+  void actualiserMatchsSemaine() {
+
+    // ============================================================
+    // CALCUL DU LUNDI DE LA SEMAINE SÉLECTIONNÉE
+    // ============================================================
+
+    final debutSemaine =
+    DateTime(
+      dateSemaineSelectionnee.year,
+      dateSemaineSelectionnee.month,
+      dateSemaineSelectionnee.day,
+    ).subtract(
+      Duration(
+        days: dateSemaineSelectionnee.weekday - 1,
+      ),
+    );
+
+    // ============================================================
+    // FIN DE SEMAINE = LUNDI SUIVANT
+    // ============================================================
+
+    final finSemaine =
+    debutSemaine.add(
+      const Duration(days: 7),
+    );
+
+    // ============================================================
+    // FILTRAGE DES MATCHS
+    // ============================================================
+
+    matchsSemaine = tousLesMatchs.where((match) {
+
+      // Le match doit être compris dans la semaine sélectionnée
+      if (match.date.isBefore(debutSemaine) ||
+          !match.date.isBefore(finSemaine)) {
+        return false;
+      }
+
+      // Filtre domicile
+      if (uniquementDomicile && !match.estDomicile) {
+        return false;
+      }
+
+      return true;
+
+    }).toList();
+
+    // ============================================================
+    // TRI DATE + HEURE
+    // ============================================================
+
+    matchsSemaine.sort((a, b) {
+      final cmp = a.date.compareTo(b.date);
+
+      if (cmp != 0) {
+        return cmp;
+      }
+
+      return a.heureEnMinutes.compareTo(
+        b.heureEnMinutes,
+      );
     });
   }
 
@@ -1128,35 +1153,7 @@ class _PlanningPageState extends State<PlanningPage> {
                       ),
 
                       const SizedBox(height: 16),
-                     /* DropdownButtonFormField<String>(
-                        decoration:
-                        const InputDecoration(
-                          labelText: 'Terrain',
-                          border:
-                          OutlineInputBorder(),
-                        ),
 
-                        items: terrains
-                            .map(
-                              (terrain) {
-                            return DropdownMenuItem<
-                                String>(
-                              value: terrain.id,
-                              child:
-                              Text(
-                                terrain.nom,
-                              ),
-                            );
-                          },
-                        ).toList(),
-
-                        onChanged: (value) {
-                          setDialogState(() {
-                            stade =
-                                value;
-                          });
-                        },
-                      ),*/
                       // ==================================================
 // TERRAIN / LIEU
 // ==================================================
@@ -1344,20 +1341,7 @@ class _PlanningPageState extends State<PlanningPage> {
                       noSemaine: numeroSemaine(dateMatch!),
                       modification: '',
                     );
-                   /* final nouveauMatch = MatchFoot(
-                      numeroMatch: '',
-                      equipeLocale: equipeLocale!,
-                      recevant: 'oui',
-                      dateMatch: formatDate2(dateMatch!),
-                      heureMatch: formatHeure(heureMatch!),
-                      equipeAdverse: equipeAdverse!.trim(),
-                      stade: terrainSelectionne?.nom ?? '',
-                      phase: 'aller',
-                      ville: terrainSelectionne?.ville ?? '',
-                      competition: competition!,
-                      noSemaine: numeroSemaine(dateMatch!),
-                      modification: '',
-                    );*/
+
 
                     Navigator.pop(context, nouveauMatch);
 
@@ -1784,7 +1768,7 @@ class _PlanningPageState extends State<PlanningPage> {
                       // ADMINISTRATION
                       // ===============================================================
 
-                      if (isAdmin)
+                      if (widget.peutGererMatchs)
                         Padding(
                           padding: const EdgeInsets.only(
                             top: 3,
@@ -1854,53 +1838,43 @@ class _PlanningPageState extends State<PlanningPage> {
     return Scaffold(
       appBar: AppBar(
         leading: GestureDetector(
-            onLongPress: () async {
-              if (isAdmin) {
-                final confirmer = await showDialog<bool>(
-                  context: context,
-                  builder: (context) {
-                    return AlertDialog(
-                      title: const Text('Déconnexion'),
-                      content: const Text(
-                        'Voulez-vous vous déconnecter du mode administrateur ?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context, false);
-                          },
-                          child: const Text('Annuler'),
-                        ),
-                        FilledButton(
-                          onPressed: () {
-                            Navigator.pop(context, true);
-                          },
-                          child: const Text('Déconnexion'),
-                        ),
-                      ],
-                    );
-                  },
+          onLongPress: () async {
+            if (widget.utilisateurConnecte == null) {
+              widget.onConnexion();
+              return;
+            }
+
+            final confirmer = await showDialog<bool>(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  title: const Text('Déconnexion'),
+                  content: Text(
+                    'Voulez-vous vous déconnecter du mode administrateur ? ',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context, false);
+                      },
+                      child: const Text('Annuler'),
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.pop(context, true);
+                      },
+                      child: const Text('Déconnexion'),
+                    ),
+                  ],
                 );
+              },
+            );
 
-                if (confirmer == true) {
-                  await FirebaseAuth.instance.signOut();
-                }
+            if (confirmer == true) {
+              await widget.onDeconnexion();
+            }
+          },
 
-                return;
-              }
-
-              // -------------------------------------------------
-              // Utilisateur normal : ouverture de la connexion
-              // -------------------------------------------------
-
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AdminLoginPage(),
-                ),
-              );
-
-            },
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Image.asset(
@@ -1931,9 +1905,7 @@ class _PlanningPageState extends State<PlanningPage> {
                 IconButton(
                   icon: const Icon(Icons.chevron_left),
                   tooltip: 'Semaine précédente',
-                  onPressed: semaineSelectionnee > 1
-                      ? semainePrecedente
-                      : null,
+                  onPressed: semainePrecedente
                 ),
 
                 //const SizedBox(width: 10),
@@ -1978,7 +1950,7 @@ class _PlanningPageState extends State<PlanningPage> {
         ),
       ),
       // 👇 Nouvelle action principale
-      floatingActionButton: isAdmin
+      floatingActionButton: widget.peutGererMatchs
           ? FloatingActionButton.extended(
         onPressed: ajouterMatch,
         icon: const Icon(Icons.add),
@@ -2016,247 +1988,7 @@ class _PlanningPageState extends State<PlanningPage> {
       ],
     ),
 
-          /*
-      matchsSemaine.isEmpty
-          ? const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.sports_soccer,
-              size: 64,
-              color: Colors.blue,
-            ),
-            SizedBox(height: 16),
-            Text(
-              "Aucun match cette semaine",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              "Profitez-en pour vous reposer ! 😊",
-              style: TextStyle(
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      )
-          :  ListView.builder(
-        itemCount: matchsSemaine.length,
-        itemBuilder: (context, index) {
-          final match = matchsSemaine[index];
 
-          final bool afficherDate = index == 0 ||
-              match.date != matchsSemaine[index - 1].date;
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (afficherDate)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    16,
-                    16,
-                    16,
-                    8,
-                  ),
-                  child: Text(
-                    formatDate(match.date),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-
-              Card(
-                color: couleurMatch(match.couleur),
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                child: ListTile(
-                  dense: true,
-
-                  // ---------------------------------------------------
-                  // Appui sur le match
-                  // ---------------------------------------------------
-
-                  onTap: match.modification != null &&
-                      match.modification!.trim().isNotEmpty
-                      ? () => _afficherModification(match)
-                      : null,
-
-                  // ---------------------------------------------------
-                  // HEURE
-                  // ---------------------------------------------------
-
-                  leading: Text(
-                    match.heureMatch,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-
-                  // ---------------------------------------------------
-                  // ÉQUIPES + STATUT
-                  // ---------------------------------------------------
-
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-
-                      // -------------------------------------------------
-                      // Équipes
-                      // -------------------------------------------------
-
-                      Row(
-                        children: [
-
-                          Expanded(
-                            child: Text(
-                              '${match.equipeLocale} - '
-                                  '${match.equipeAdverse}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-
-                          // ---------------------------------------------
-                          // ⚠️ Match modifié
-                          // ---------------------------------------------
-
-                          if (match.modification != null &&
-                              match.modification!.trim().isNotEmpty &&
-                              (match.statut == null ||
-                                  match.statut == MatchFoot.statutNormal))
-                            const Padding(
-                              padding: EdgeInsets.only(left: 6),
-                              child: Icon(
-                                Icons.warning_amber_rounded,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                            ),
-
-                          // -------------------------------------------------
-                          // STATUT
-                          // -------------------------------------------------
-
-                          _buildStatutMatch(match),
-                        ],
-                      ),
-
-                      // -------------------------------------------------
-                      // STATUT
-                      // -------------------------------------------------
-
-                      if (match.statut == MatchFoot.statutReporte)
-                        const Text(
-                          'MATCH REPORTÉ',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                        ),
-
-                      if (match.statut == MatchFoot.statutForfaitFc)
-                        const Text(
-                          'FORFAIT FCSSM',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                        ),
-
-                      if (match.statut == MatchFoot.statutForfaitAdverse)
-                        const Text(
-                          'FORFAIT ADVERSE',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                        ),
-                    ],
-                  ),
-
-                  // ---------------------------------------------------
-                  // STADE - VILLE
-                  // ---------------------------------------------------
-
-                  subtitle: Text(
-                    '${match.stade} - ${match.ville}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                    ),
-                  ),
-
-                  // ---------------------------------------------------
-                  // ADMINISTRATION
-                  // ---------------------------------------------------
-
-                  trailing: isAdmin
-                      ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-
-                      // Compétition
-                      Text(
-                        match.competition,
-                        style: const TextStyle(
-                          fontSize: 11,
-                        ),
-                      ),
-
-                      // Modifier
-                      IconButton(
-                        icon: const Icon(
-                          Icons.edit,
-                          size: 20,
-                        ),
-                        tooltip: 'Modifier le match',
-                        onPressed: () {
-                          _modifierMatch(match);
-                        },
-                      ),
-
-                      // Supprimer
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          size: 20,
-                        ),
-                        tooltip: 'Supprimer le match',
-                        onPressed: () => supprimerMatch(match),
-                      ),
-                    ],
-                  )
-                      : Text(
-                    match.competition,
-                    style: const TextStyle(
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ),
-
-            ],
-          );
-        },
-      ),
-      */
     );
   }
 }

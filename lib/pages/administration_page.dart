@@ -3,7 +3,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-
 import '../services/excel_import_service.dart';
 import '../services/firestore_service.dart';
 
@@ -739,13 +738,10 @@ class _AdministrationPageState extends State<AdministrationPage> {
         builder: (dialogContext) {
           return AlertDialog(
             title: const Text(
-              'Remplacer le planning Firebase ?',
+              'Synchroniser le planning Firebase ?',
             ),
             content: Text(
-              'Le planning actuellement présent dans Firebase '
-                  'sera entièrement supprimé puis remplacé.\n\n'
-                  'Matchs dans le fichier : ${matchs.length}\n\n'
-                  'Cette opération ne peut pas être annulée.',
+              'Les matchs existants seront comparés avec le fichier importé. Les nouveaux matchs seront ajoutés et les matchs modifiés seront mis à jour. Les matchs inchangés ne seront pas modifiés..',
             ),
             actions: [
               TextButton(
@@ -796,11 +792,17 @@ class _AdministrationPageState extends State<AdministrationPage> {
       // -------------------------------------------------------------------------
 
 
-      final version = await FirestoreService.incrementerVersionPlanning();
+     /* final version = await FirestoreService.incrementerVersionPlanning();
 
       await FirestoreService.remplacerPlanning(
         json: planningJson,
         version: version,
+      );
+      */
+
+      final resultat =
+      await FirestoreService.importerPlanningIncremental(
+        json: planningJson,
       );
 
       // -------------------------------------------------------------------------
@@ -814,13 +816,15 @@ class _AdministrationPageState extends State<AdministrationPage> {
       // -------------------------------------------------------------------------
       // Succès
       // -------------------------------------------------------------------------
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.green,
+          duration: const Duration(seconds: 5),
           content: Text(
-            'Planning Firebase mis à jour avec succès.\n'
-                '${matchs.length} matchs importés.',
+            'Synchronisation Firebase terminée.\n\n'
+                '➕ ${resultat.ajoutes} match(s) ajouté(s)\n'
+                '✏️ ${resultat.modifies} match(s) modifié(s)\n'
+                '✓ ${resultat.inchanges} match(s) inchangé(s)',
           ),
         ),
       );
@@ -843,7 +847,6 @@ class _AdministrationPageState extends State<AdministrationPage> {
       );
     }
   }
-
 
 
   // ---------------------------------------------------------------------------
@@ -873,6 +876,47 @@ class _AdministrationPageState extends State<AdministrationPage> {
               'Sélectionnez le fichier Excel contenant '
               'le planning des matchs.',
             ),
+
+            // Import entrainement du JSON vers Firestore
+            /*
+            const SizedBox(height: 30),
+
+            ElevatedButton.icon(
+              icon: const Icon(Icons.upload),
+              label: const Text(
+                'Importer les entraînements dans Firestore',
+              ),
+              onPressed: () async {
+                try {
+                  final nombre =
+                  await FirestoreService
+                      .importerEntrainementsDepuisAssets();
+
+                  if (!context.mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '$nombre entraînements importés avec succès',
+                      ),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  if (!context.mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Erreur lors de l\'import : $e',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+            */
 
             const SizedBox(height: 30),
 

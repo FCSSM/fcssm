@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
 import '../models/entrainement.dart';
-import '../services/planning_entrainement_service.dart';
+import '../services/firestore_service.dart';
 
 enum PlanningViewMode {
   jour,
@@ -18,8 +17,6 @@ class PlanningEntrainementPage extends StatefulWidget {
 
 class _PlanningEntrainementPageState
     extends State<PlanningEntrainementPage> {
-  final PlanningEntrainementService _planningService =
-  PlanningEntrainementService();
 
   List<Entrainement> _entrainements = [];
 
@@ -75,7 +72,7 @@ class _PlanningEntrainementPageState
   Future<void> _chargerPlanningEntrainement() async {
     try {
       final planning =
-      await _planningService.chargerPlanningEntrainement();
+      await FirestoreService.chargerEntrainements();
 
       if (!mounted) return;
 
@@ -85,6 +82,11 @@ class _PlanningEntrainementPageState
         _erreur = null;
       });
     } catch (e) {
+      debugPrint(
+        '[PlanningEntrainementPage] '
+            'Erreur chargement : $e',
+      );
+
       if (!mounted) return;
 
       setState(() {

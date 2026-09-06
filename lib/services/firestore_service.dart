@@ -1,8 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:convert';
-import '../models/match.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
+
+import '../models/match.dart';
+import '../models/entrainement.dart';
+import '../models/utilisateur.dart';
+import '../models/resultat_import_firebase.dart';
 
 class FirestoreService {
   static final FirebaseFirestore _db =
@@ -38,7 +43,7 @@ class FirestoreService {
     await mettreAJourVersionPlanning(version);
   }
 
-// ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Suppression de tous les matchs
   // ---------------------------------------------------------------------------
 
@@ -121,6 +126,191 @@ class FirestoreService {
     }
   }
 
+  //----------------------------------------------------------------------------
+  // IMPORT INCREMENTAL
+  //----------------------------------------------------------------------------
+
+  static Future<ResultatImportFirebase> importerPlanningIncremental({
+    required String json,
+  }) async {
+
+    int ajoutes = 0;
+    int modifies = 0;
+    int inchanges = 0;
+
+    // ---------------------------------------------------------------------------
+    // Décodage du JSON
+    // ---------------------------------------------------------------------------
+
+    final dynamic decoded = jsonDecode(json);
+
+    if (decoded is! List) {
+      throw Exception(
+        'Le planning JSON doit contenir une liste de matchs.',
+      );
+    }
+
+    // ---------------------------------------------------------------------------
+    // Récupération des matchs existants
+    // ---------------------------------------------------------------------------
+
+    final snapshot = await _matchs.get();
+
+    final Map<String, Map<String, dynamic>> matchsExistants = {
+      for (final doc in snapshot.docs)
+        doc.id: doc.data(),
+    };
+
+    final batch = _db.batch();
+
+    bool modificationDetectee = false;
+
+    // ---------------------------------------------------------------------------
+    // Analyse des matchs importés
+    // ---------------------------------------------------------------------------
+
+    for (final element in decoded) {
+      if (element is! Map) {
+        continue;
+      }
+
+      final match = Map<String, dynamic>.from(element);
+
+      final numeroMatch =
+          match['no_match']?.toString().trim() ?? '';
+
+      if (numeroMatch.isEmpty) {
+        debugPrint(
+          '[FirestoreService] Match ignoré : no_match absent.',
+        );
+        continue;
+      }
+
+      final ancienMatch = matchsExistants[numeroMatch];
+
+      // -------------------------------------------------------------------------
+      // NOUVEAU MATCH
+      // -------------------------------------------------------------------------
+
+      if (ancienMatch == null) {
+        batch.set(
+          _matchs.doc(numeroMatch),
+          match,
+        );
+
+        ajoutes++;
+        modificationDetectee = true;
+
+        continue;
+      }
+
+      // -------------------------------------------------------------------------
+      // MATCH INCHANGÉ
+      // -------------------------------------------------------------------------
+
+      if (_matchsSontIdentiques(
+        ancienMatch,
+        match,
+      )) {
+        inchanges++;
+        continue;
+      }
+
+      // -------------------------------------------------------------------------
+      // MATCH MODIFIÉ
+      // -------------------------------------------------------------------------
+
+      batch.set(
+        _matchs.doc(numeroMatch),
+        match,
+      );
+
+      modifies++;
+      modificationDetectee = true;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Aucune modification
+    // ---------------------------------------------------------------------------
+
+    if (!modificationDetectee) {
+      return ResultatImportFirebase(
+        ajoutes: ajoutes,
+        modifies: modifies,
+        inchanges: inchanges,
+      );
+    }
+
+    // ---------------------------------------------------------------------------
+    // Nouvelle version du planning
+    // ---------------------------------------------------------------------------
+
+    final version = await incrementerVersionPlanning();
+
+    final versionReference =
+    _db.collection('configuration').doc('planning');
+
+    batch.set(
+      versionReference,
+      {
+        'version': version,
+      },
+      SetOptions(merge: true),
+    );
+
+    // ---------------------------------------------------------------------------
+    // Exécution
+    // ---------------------------------------------------------------------------
+
+    await batch.commit();
+
+    debugPrint(
+      '[FirestoreService] Import incrémental terminé.',
+    );
+
+    debugPrint('Ajoutés : $ajoutes');
+    debugPrint('Modifiés : $modifies');
+    debugPrint('Inchangés : $inchanges');
+
+    return ResultatImportFirebase(
+      ajoutes: ajoutes,
+      modifies: modifies,
+      inchanges: inchanges,
+    );
+  }
+
+
+  static bool _matchsSontIdentiques(
+      Map<String, dynamic> ancien,
+      Map<String, dynamic> nouveau,
+      ) {
+    if (ancien.length != nouveau.length) {
+      return false;
+    }
+
+    for (final entree in nouveau.entries) {
+      final cle = entree.key;
+
+      if (!ancien.containsKey(cle)) {
+        return false;
+      }
+
+      final ancienneValeur =
+          ancien[cle]?.toString().trim() ?? '';
+
+      final nouvelleValeur =
+          entree.value?.toString().trim() ?? '';
+
+      if (ancienneValeur != nouvelleValeur) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+
+
   // ===========================================================================
   // LECTURE
   // ===========================================================================
@@ -167,8 +357,7 @@ class FirestoreService {
     return data?['version']?.toString();
   }
 
-
-  // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // MODIFIER UN MATCH + VERSION
 // ---------------------------------------------------------------------------
 
@@ -351,7 +540,7 @@ class FirestoreService {
 
     return numeroMatch;
   }
-  // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Écoute de la version du planning
 // ---------------------------------------------------------------------------
 
@@ -430,46 +619,6 @@ class FirestoreService {
 
     return '$date-01';
   }
-
- /* static Future<String> _genererNumeroMatchManuel() async {
-    final compteurReference = _db
-        .collection('configuration')
-        .doc('numero_match_manuel');
-
-    return await _db.runTransaction<String>((transaction) async {
-      final snapshot =
-      await transaction.get(compteurReference);
-
-      int dernierNumero = 0;
-
-      if (snapshot.exists) {
-        final data = snapshot.data();
-
-        dernierNumero =
-            (data?['dernier_numero'] as num?)?.toInt() ?? 0;
-      }
-
-      final nouveauNumero =
-          dernierNumero + 1;
-
-      transaction.set(
-        compteurReference,
-        {
-          'dernier_numero': nouveauNumero,
-        },
-        SetOptions(merge: true),
-      );
-
-      final maintenant = DateTime.now();
-
-      final date =
-          '${maintenant.year.toString().padLeft(4, '0')}'
-          '${maintenant.month.toString().padLeft(2, '0')}'
-          '${maintenant.day.toString().padLeft(2, '0')}';
-
-      return 'M-$date-${nouveauNumero.toString().padLeft(3, '0')}';
-    });
-  }*/
 
   static Future<String> _genererNumeroMatchManuel() async {
     final compteurReference = _db
@@ -769,6 +918,172 @@ class FirestoreService {
     debugPrint(
       '[FirestoreService] Liste des competitions initialisée',
     );
+  }
+
+ //---------------------------------------------------------------------------
+// Gestion des entrainements
+// ---------------------------------------------------------------------------
+  static Future<int> importerEntrainementsDepuisAssets() async {
+    try {
+      // ============================================================
+      // LECTURE DU FICHIER JSON
+      // ============================================================
+
+      final jsonString = await rootBundle.loadString(
+        'assets/planning_entrainement.json',
+      );
+
+      final Map<String, dynamic> data =
+      jsonDecode(jsonString);
+
+      // ============================================================
+      // BATCH FIRESTORE
+      // ============================================================
+
+      final batch = _db.batch();
+
+      int compteur = 0;
+
+      // ============================================================
+      // PARCOURS DES LIEUX
+      // ============================================================
+
+      data.forEach((lieu, joursData) {
+
+        final Map<String, dynamic> jours =
+        Map<String, dynamic>.from(joursData);
+
+        // ----------------------------------------------------------
+        // PARCOURS DES JOURS
+        // ----------------------------------------------------------
+
+        jours.forEach((jour, categoriesData) {
+
+          final Map<String, dynamic> categories =
+          Map<String, dynamic>.from(categoriesData);
+
+          // --------------------------------------------------------
+          // PARCOURS DES CATÉGORIES
+          // --------------------------------------------------------
+
+          categories.forEach((categorie, horaire) {
+
+            final reference =
+            _db.collection('entrainements').doc();
+
+
+            batch.set(reference, {
+              'lieu': lieu,
+              'jour': jour,
+              'categorie': categorie,
+              'horaire': horaire,
+            });
+
+            compteur++;
+          });
+        });
+      });
+
+      // ============================================================
+      // ENREGISTREMENT
+      // ============================================================
+
+      await batch.commit();
+
+      debugPrint(
+        '[FirestoreService] '
+            '$compteur entraînements importés',
+      );
+
+      return compteur;
+
+    } catch (e, stackTrace) {
+
+      debugPrint(
+        '[FirestoreService] '
+            'Erreur import entraînements : $e',
+      );
+
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
+
+      rethrow;
+    }
+  }
+
+  static Future<List<Entrainement>> chargerEntrainements() async {
+    try {
+      final snapshot = await _db
+          .collection('entrainements')
+          .get();
+
+      final entrainements = snapshot.docs.map((doc) {
+        final data = doc.data();
+
+        return Entrainement(
+          lieu: data['lieu']?.toString() ?? '',
+          jour: data['jour']?.toString() ?? '',
+          categorie: data['categorie']?.toString() ?? '',
+          horaire: data['horaire']?.toString() ?? '',
+        );
+      }).toList();
+
+      debugPrint(
+        '[FirestoreService] '
+            '${entrainements.length} entraînements chargés',
+      );
+
+      return entrainements;
+    } catch (e, stackTrace) {
+      debugPrint(
+        '[FirestoreService] '
+            'Erreur chargement entraînements : $e',
+      );
+
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
+
+      rethrow;
+    }
+  }
+
+
+// ---------------------------------------------------------------------------
+// UTILISATEUR CONNECTÉ
+// ---------------------------------------------------------------------------
+
+  Future<Utilisateur?> chargerUtilisateurConnecte() async {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+
+    // Aucun utilisateur connecté
+    if (firebaseUser == null) {
+      return null;
+    }
+
+    final document = await FirebaseFirestore.instance
+        .collection('utilisateurs')
+        .doc(firebaseUser.uid)
+        .get();
+
+    // Aucun profil Firestore associé
+    if (!document.exists || document.data() == null) {
+      return null;
+    }
+
+    return Utilisateur.fromFirestore(
+      document.id,
+      document.data()!,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // DÉCONNEXION
+  // ---------------------------------------------------------------------------
+
+  Future<void> deconnecterUtilisateur() async {
+    await FirebaseAuth.instance.signOut();
   }
 
 
