@@ -148,7 +148,13 @@ class _HomePageState extends State<HomePage> {
       body: pages[index < pages.length ? index : 0],
 
       bottomNavigationBar: NavigationBar(
-        labelTextStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 11)),
+        labelTextStyle: const WidgetStatePropertyAll(
+          TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+
 
         selectedIndex: index,
 

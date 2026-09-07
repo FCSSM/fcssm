@@ -28,6 +28,9 @@ class _PlanningEquipesState
 
   String? _equipeSelectionnee;
 
+  // Afficher uniquement les matchs à venir
+  bool _matchsAVenirUniquement = true;
+
   bool _chargement = true;
 
   String? _erreur;
@@ -238,6 +241,73 @@ class _PlanningEquipesState
       return [];
     }
 
+    // Date du jour à minuit
+    final maintenant = DateTime.now();
+
+    final dateDuJour = DateTime(
+      maintenant.year,
+      maintenant.month,
+      maintenant.day,
+    );
+
+    return _tousLesMatchs
+        .where((match) {
+
+      // Filtre sur l'équipe sélectionnée
+      if (match.equipeLocale.trim() !=
+          _equipeSelectionnee!.trim()) {
+        return false;
+      }
+
+      // Si l'interrupteur est désactivé :
+      // afficher tous les matchs
+      if (!_matchsAVenirUniquement) {
+        return true;
+      }
+
+      // Sinon :
+      // uniquement les matchs d'aujourd'hui et futurs
+      return !match.date.isBefore(dateDuJour);
+    })
+        .toList();
+  }
+
+ /* List<MatchFoot> get _matchsEquipe {
+
+    if (_equipeSelectionnee == null) {
+      return [];
+    }
+
+    // Date du jour à minuit
+    final aujourdHui = DateTime.now();
+
+    final dateDuJour = DateTime(
+      aujourdHui.year,
+      aujourdHui.month,
+      aujourdHui.day,
+    );
+
+    return _tousLesMatchs
+        .where((match) {
+
+      // Filtre sur l'équipe sélectionnée
+      if (match.equipeLocale.trim() !=
+          _equipeSelectionnee!.trim()) {
+        return false;
+      }
+
+      // Conserver uniquement les matchs
+      // d'aujourd'hui et futurs
+      return !match.date.isBefore(dateDuJour);
+    })
+        .toList();
+  }*/
+  /*List<MatchFoot> get _matchsEquipe {
+
+    if (_equipeSelectionnee == null) {
+      return [];
+    }
+
     return _tousLesMatchs
         .where(
           (match) =>
@@ -245,7 +315,7 @@ class _PlanningEquipesState
           _equipeSelectionnee!.trim(),
     )
         .toList();
-  }
+  }*/
 
   // ===========================================================================
   // COULEUR DU MATCH
@@ -557,28 +627,68 @@ class _PlanningEquipesState
           },
         ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
 
         if (_equipeSelectionnee != null)
 
           Row(
             children: [
 
-              const Icon(
-                Icons.calendar_month,
-                size: 20,
+              // =============================================================
+              // INTERRUPTEUR
+              // =============================================================
+
+             /* Switch(
+                value: _matchsAVenirUniquement,
+                onChanged: (value) {
+                  setState(() {
+                    _matchsAVenirUniquement = value;
+                  });
+                },
+              ),*/
+              Transform.scale(
+                scale: 0.75,
+                child: Switch(
+                  value: _matchsAVenirUniquement,
+                  onChanged: (value) {
+                    setState(() {
+                      _matchsAVenirUniquement = value;
+                    });
+                  },
+                ),
               ),
+
+              const SizedBox(width: 4),
+
+              const Expanded(
+                child: Text(
+                  'Masquer les matchs passés',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+
+              // =============================================================
+              // COMPTEUR
+              // =============================================================
 
               const SizedBox(width: 8),
 
+              const Icon(
+                Icons.calendar_month,
+                size: 18,
+              ),
+
+              const SizedBox(width: 5),
+
               Text(
                 '${matchs.length} match'
-                    '${matchs.length > 1 ? 's' : ''} '
-                    'sur la saison',
-                style:
-                const TextStyle(
-                  fontWeight:
-                  FontWeight.bold,
+                    '${matchs.length > 1 ? 's' : ''}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
@@ -771,183 +881,4 @@ class _PlanningEquipesState
     );
   }
 
-/*Widget build(
-      BuildContext context,
-      ) {
-    return Scaffold(
-        appBar: AppBar(
-          leading: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Image.asset(
-              'assets/images/logo_club.png',
-              fit: BoxFit.contain,
-            ),
-          ),
-          title: Text("Planning équipes"),
-
-        ),
-        body:
-        if (_chargement) {
-
-            return const Center(
-              child:
-              CircularProgressIndicator(),
-            );
-          }
-
-          if (_erreur != null) {
-
-            return Center(
-              child: Padding(
-                padding:
-                const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize:
-                  MainAxisSize.min,
-                  children: [
-
-                    const Icon(
-                      Icons.error_outline,
-                      size: 50,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Text(
-                      _erreur!,
-                      textAlign:
-                      TextAlign.center,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    ElevatedButton.icon(
-                      onPressed:
-                      _chargerPlanning,
-                      icon:
-                      const Icon(
-                        Icons.refresh,
-                      ),
-                      label:
-                      const Text(
-                        'Réessayer',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          if (_tousLesMatchs.isEmpty) {
-
-            return Center(
-              child: Column(
-                mainAxisSize:
-                MainAxisSize.min,
-                children: [
-
-                  const Icon(
-                    Icons.calendar_month_outlined,
-                    size: 60,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  const Text(
-                    'Aucun match dans le planning.',
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  ElevatedButton.icon(
-                    onPressed:
-                    _chargerPlanning,
-                    icon:
-                    const Icon(
-                      Icons.refresh,
-                    ),
-                    label:
-                    const Text(
-                      'Actualiser',
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final matchs =
-              _matchsEquipe;
-
-          return RefreshIndicator(
-            onRefresh:
-            _chargerPlanning,
-            child: CustomScrollView(
-              physics:
-              const AlwaysScrollableScrollPhysics(),
-              slivers: [
-
-                // -------------------------------------------------------------------
-                // SÉLECTION DE L'ÉQUIPE
-                // -------------------------------------------------------------------
-
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding:
-                    const EdgeInsets.all(12),
-                    child:
-                    _buildHeader(),
-                  ),
-                ),
-
-                // -------------------------------------------------------------------
-                // AUCUN MATCH
-                // -------------------------------------------------------------------
-
-                if (matchs.isEmpty)
-
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Text(
-                        'Aucun match pour cette équipe.',
-                      ),
-                    ),
-                  )
-
-                // -------------------------------------------------------------------
-                // LISTE DES MATCHS
-                // -------------------------------------------------------------------
-
-                else
-
-                  SliverPadding(
-                    padding:
-                    const EdgeInsets.fromLTRB(
-                      12,
-                      0,
-                      12,
-                      20,
-                    ),
-                    sliver:
-                    SliverList(
-                      delegate:
-                      SliverChildBuilderDelegate(
-                            (context, index) {
-
-                          return _buildMatchCard(
-                            matchs[index],
-                          );
-                        },
-                        childCount:
-                        matchs.length,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          );
-    );
-  }*/
 }

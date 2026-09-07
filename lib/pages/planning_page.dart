@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:week_number/iso.dart';
 
-
-import '../models/match.dart' ;
+import '../models/match.dart';
 import '../models/terrain.dart';
 import '../services/firestore_service.dart';
 import '../services/terrain_service.dart';
@@ -14,12 +13,12 @@ import '../models/utilisateur.dart';
 
 class PlanningPage extends StatefulWidget {
   final VoidCallback? onAdminConnecte;
+
   //final bool peutGererMatchs;
   final bool peutGererMatchs;
   final Utilisateur? utilisateurConnecte;
   final VoidCallback onConnexion;
   final Future<void> Function() onDeconnexion;
-
 
   const PlanningPage({
     super.key,
@@ -28,20 +27,16 @@ class PlanningPage extends StatefulWidget {
     required this.utilisateurConnecte,
     required this.onConnexion,
     required this.onDeconnexion,
-
   });
 
   @override
   State<PlanningPage> createState() => _PlanningPageState();
 }
 
-
 class _PlanningPageState extends State<PlanningPage> {
-
   StreamSubscription<void>? _planningSubscription;
 
-  final PageController _semainePageController =
-  PageController(initialPage: 1);
+  final PageController _semainePageController = PageController(initialPage: 1);
 
   /// Tous les matchs provenant du JSON
   List<MatchFoot> tousLesMatchs = [];
@@ -53,13 +48,13 @@ class _PlanningPageState extends State<PlanningPage> {
   DateTime dateSelectionnee = DateTime.now();
 
   // Semaine affichée
-  int semaineSelectionnee = DateTime
-      .now()
-      .weekNumber;
+  int semaineSelectionnee = DateTime.now().weekNumber;
 
   DateTime dateSemaineSelectionnee = DateTime.now();
 
   bool uniquementDomicile = false;
+
+  bool vueLight = false;
 
   String formatDate(DateTime date) {
     const jours = [
@@ -91,7 +86,6 @@ class _PlanningPageState extends State<PlanningPage> {
         "${date.day} "
         "${mois[date.month - 1]}";
   }
-
 
   Color couleurMatch(String couleurMatch) {
     switch (couleurMatch) {
@@ -142,10 +136,7 @@ class _PlanningPageState extends State<PlanningPage> {
       alignment: Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(top: 3),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 7,
-          vertical: 2,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
         decoration: BoxDecoration(
           color: couleur,
           borderRadius: BorderRadius.circular(5),
@@ -153,11 +144,7 @@ class _PlanningPageState extends State<PlanningPage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icone,
-              color: Colors.white,
-              size: 13,
-            ),
+            Icon(icone, color: Colors.white, size: 13),
             const SizedBox(width: 4),
             Text(
               texte,
@@ -179,21 +166,17 @@ class _PlanningPageState extends State<PlanningPage> {
     chargerEquipes();
     chargerCompetitions();
 
-
     // Surveillance des modifications du planning
-    _planningSubscription =
-        PlanningService.planningModifie.listen((_) {
-          debugPrint(
-            '[PlanningPage] 🔄 Planning modifié, rechargement.',
-          );
+    _planningSubscription = PlanningService.planningModifie.listen((_) {
+      debugPrint('[PlanningPage] 🔄 Planning modifié, rechargement.');
 
-          if (!mounted) {
-            return;
-          }
+      if (!mounted) {
+        return;
+      }
 
-          // Recharger les matchs depuis Firestore
-          chargerPlanning(semaineSelectionnee);
-        });
+      // Recharger les matchs depuis Firestore
+      chargerPlanning(semaineSelectionnee);
+    });
 
     // Chargement initial
     chargerPlanning(semaineSelectionnee);
@@ -204,7 +187,6 @@ class _PlanningPageState extends State<PlanningPage> {
     _planningSubscription?.cancel();
     _semainePageController.dispose();
     super.dispose();
-
   }
 
   Future<void> chargerEquipes() async {
@@ -232,9 +214,7 @@ class _PlanningPageState extends State<PlanningPage> {
   }
 
   int numeroSemaine(DateTime date) {
-    final jeudi = date.add(
-      Duration(days: DateTime.thursday - date.weekday),
-    );
+    final jeudi = date.add(Duration(days: DateTime.thursday - date.weekday));
 
     final debutAnnee = DateTime(jeudi.year, 1, 4);
 
@@ -242,9 +222,7 @@ class _PlanningPageState extends State<PlanningPage> {
       Duration(days: debutAnnee.weekday - DateTime.monday),
     );
 
-    return (jeudi
-        .difference(lundiSemaine1)
-        .inDays ~/ 7) + 1;
+    return (jeudi.difference(lundiSemaine1).inDays ~/ 7) + 1;
   }
 
   Future<void> choisirDate() async {
@@ -265,8 +243,7 @@ class _PlanningPageState extends State<PlanningPage> {
       dateSemaineSelectionnee = dateChoisie;
 
       // Numéro de semaine correspondant
-      semaineSelectionnee =
-          numeroSemaine(dateSemaineSelectionnee);
+      semaineSelectionnee = numeroSemaine(dateSemaineSelectionnee);
     });
 
     actualiserMatchsSemaine();
@@ -276,39 +253,26 @@ class _PlanningPageState extends State<PlanningPage> {
     final morceaux = date.split('/');
 
     if (morceaux.length != 3) {
-      throw FormatException(
-        'Date invalide : $date',
-      );
+      throw FormatException('Date invalide : $date');
     }
 
     final jour = int.parse(morceaux[0]);
     final mois = int.parse(morceaux[1]);
     final annee = int.parse(morceaux[2]);
 
-    return DateTime(
-      annee,
-      mois,
-      jour,
-    );
+    return DateTime(annee, mois, jour);
   }
 
   Future<void> chargerPlanning(int semaine) async {
     try {
-      final String jsonString =
-      await PlanningService.loadPlanning();
+      final String jsonString = await PlanningService.loadPlanning();
 
-      await _actualiserPlanning(
-        jsonString,
-        semaine,
-      );
+      await _actualiserPlanning(jsonString, semaine);
     } catch (e, stackTrace) {
-      debugPrint(
-        'Erreur lors du chargement du planning : $e',
-      );
+      debugPrint('Erreur lors du chargement du planning : $e');
       debugPrintStack(stackTrace: stackTrace);
     }
   }
-
 
   /*void actualiserMatchsSemaine() {
 
@@ -336,37 +300,27 @@ class _PlanningPageState extends State<PlanningPage> {
   }*/
 
   void actualiserMatchsSemaine() {
-
     // ============================================================
     // CALCUL DU LUNDI DE LA SEMAINE SÉLECTIONNÉE
     // ============================================================
 
-    final debutSemaine =
-    DateTime(
+    final debutSemaine = DateTime(
       dateSemaineSelectionnee.year,
       dateSemaineSelectionnee.month,
       dateSemaineSelectionnee.day,
-    ).subtract(
-      Duration(
-        days: dateSemaineSelectionnee.weekday - 1,
-      ),
-    );
+    ).subtract(Duration(days: dateSemaineSelectionnee.weekday - 1));
 
     // ============================================================
     // FIN DE SEMAINE = LUNDI SUIVANT
     // ============================================================
 
-    final finSemaine =
-    debutSemaine.add(
-      const Duration(days: 7),
-    );
+    final finSemaine = debutSemaine.add(const Duration(days: 7));
 
     // ============================================================
     // FILTRAGE DES MATCHS
     // ============================================================
 
     matchsSemaine = tousLesMatchs.where((match) {
-
       // Le match doit être compris dans la semaine sélectionnée
       if (match.date.isBefore(debutSemaine) ||
           !match.date.isBefore(finSemaine)) {
@@ -379,7 +333,6 @@ class _PlanningPageState extends State<PlanningPage> {
       }
 
       return true;
-
     }).toList();
 
     // ============================================================
@@ -393,19 +346,13 @@ class _PlanningPageState extends State<PlanningPage> {
         return cmp;
       }
 
-      return a.heureEnMinutes.compareTo(
-        b.heureEnMinutes,
-      );
+      return a.heureEnMinutes.compareTo(b.heureEnMinutes);
     });
   }
 
-  Future<void> _actualiserPlanning(
-      String jsonString,
-      int semaine,
-      ) async {
+  Future<void> _actualiserPlanning(String jsonString, int semaine) async {
     try {
-      final List<MatchFoot> listeMatchs =
-      (jsonDecode(jsonString) as List)
+      final List<MatchFoot> listeMatchs = (jsonDecode(jsonString) as List)
           .cast<Map<String, dynamic>>()
           .map(MatchFoot.fromJson)
           .toList();
@@ -452,22 +399,18 @@ class _PlanningPageState extends State<PlanningPage> {
         });
       });
     } catch (e, stackTrace) {
-      debugPrint(
-        'Erreur lors de l\'actualisation du planning : $e',
-      );
+      debugPrint('Erreur lors de l\'actualisation du planning : $e');
       debugPrintStack(stackTrace: stackTrace);
     }
   }
 
   void semainePrecedente() {
     setState(() {
-      dateSemaineSelectionnee =
-          dateSemaineSelectionnee.subtract(
-            const Duration(days: 7),
-          );
+      dateSemaineSelectionnee = dateSemaineSelectionnee.subtract(
+        const Duration(days: 7),
+      );
 
-      semaineSelectionnee =
-          numeroSemaine(dateSemaineSelectionnee);
+      semaineSelectionnee = numeroSemaine(dateSemaineSelectionnee);
     });
 
     actualiserMatchsSemaine();
@@ -475,13 +418,11 @@ class _PlanningPageState extends State<PlanningPage> {
 
   void semaineSuivante() {
     setState(() {
-      dateSemaineSelectionnee =
-          dateSemaineSelectionnee.add(
-            const Duration(days: 7),
-          );
+      dateSemaineSelectionnee = dateSemaineSelectionnee.add(
+        const Duration(days: 7),
+      );
 
-      semaineSelectionnee =
-          numeroSemaine(dateSemaineSelectionnee);
+      semaineSelectionnee = numeroSemaine(dateSemaineSelectionnee);
     });
 
     actualiserMatchsSemaine();
@@ -491,32 +432,28 @@ class _PlanningPageState extends State<PlanningPage> {
     // ============================================================
     // CONTRÔLEUR HEURE
     // ============================================================
-    final initialData = 'Match initial:\n'
-    '📅 ${match.dateMatch}\n'
-    '🕐 ${match.heureMatch}\n'
-    '📍 ${match.stade}';
+    final initialData =
+        'Match initial:\n'
+        '📅 ${match.dateMatch}\n'
+        '🕐 ${match.heureMatch}\n'
+        '📍 ${match.stade}';
 
-    String statutSelectionne =
-        match.statut ?? MatchFoot.statutNormal;
+    String statutSelectionne = match.statut ?? MatchFoot.statutNormal;
 
-    final heureController = TextEditingController(
-      text: match.heureMatch,
-    );
+    final heureController = TextEditingController(text: match.heureMatch);
 
     try {
       // ============================================================
       // DATE ACTUELLE
       // ============================================================
 
-      DateTime dateSelectionnee =
-      _parseDateFrancaise(match.dateMatch);
+      DateTime dateSelectionnee = _parseDateFrancaise(match.dateMatch);
 
       // ============================================================
       // CHARGEMENT DES TERRAINS
       // ============================================================
 
-      final terrains =
-      await TerrainService.chargerTerrains();
+      final terrains = await TerrainService.chargerTerrains();
 
       if (!mounted) {
         return;
@@ -543,20 +480,14 @@ class _PlanningPageState extends State<PlanningPage> {
         context: context,
         builder: (dialogContext) {
           return StatefulBuilder(
-            builder: (
-                dialogContext,
-                setDialogState,
-                ) {
+            builder: (dialogContext, setDialogState) {
               return AlertDialog(
-                title: const Text(
-                  'Modifier le match',
-                ),
+                title: const Text('Modifier le match'),
 
                 content: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-
                       DropdownButtonFormField<String>(
                         initialValue: statutSelectionne,
                         decoration: const InputDecoration(
@@ -595,48 +526,34 @@ class _PlanningPageState extends State<PlanningPage> {
                       // ==================================================
                       // DATE
                       // ==================================================
-
                       InkWell(
                         onTap: () async {
-                          final date =
-                          await showDatePicker(
+                          final date = await showDatePicker(
                             context: dialogContext,
-                            initialDate:
-                            dateSelectionnee,
-                            firstDate:
-                            DateTime(2020),
-                            lastDate:
-                            DateTime(2100),
-                            locale:
-                            const Locale(
-                              'fr',
-                              'FR',
-                            ),
+                            initialDate: dateSelectionnee,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                            locale: const Locale('fr', 'FR'),
                           );
 
                           if (date != null) {
                             setDialogState(() {
-                              dateSelectionnee =
-                                  date;
+                              dateSelectionnee = date;
                             });
                           }
                         },
 
                         child: InputDecorator(
-                          decoration:
-                          const InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: 'Date',
-                            border:
-                            OutlineInputBorder(),
-                            suffixIcon: Icon(
-                              Icons.calendar_month,
-                            ),
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_month),
                           ),
 
                           child: Text(
                             '${dateSelectionnee.day.toString().padLeft(2, '0')}/'
-                                '${dateSelectionnee.month.toString().padLeft(2, '0')}/'
-                                '${dateSelectionnee.year}',
+                            '${dateSelectionnee.month.toString().padLeft(2, '0')}/'
+                            '${dateSelectionnee.year}',
                           ),
                         ),
                       ),
@@ -646,20 +563,15 @@ class _PlanningPageState extends State<PlanningPage> {
                       // ==================================================
                       // HEURE
                       // ==================================================
-
                       TextField(
-                        controller:
-                        heureController,
+                        controller: heureController,
 
-                        keyboardType:
-                        TextInputType.datetime,
+                        keyboardType: TextInputType.datetime,
 
-                        decoration:
-                        const InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Heure',
                           hintText: '20:00',
-                          border:
-                          OutlineInputBorder(),
+                          border: OutlineInputBorder(),
                         ),
                       ),
 
@@ -668,37 +580,24 @@ class _PlanningPageState extends State<PlanningPage> {
                       // ==================================================
                       // TERRAIN
                       // ==================================================
-
                       DropdownButtonFormField<String>(
-                        initialValue:
-                        terrainSelectionne,
+                        initialValue: terrainSelectionne,
 
-                        decoration:
-                        const InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Terrain',
-                          border:
-                          OutlineInputBorder(),
+                          border: OutlineInputBorder(),
                         ),
 
-                        items: terrains
-                            .map(
-                              (terrain) {
-                            return DropdownMenuItem<
-                                String>(
-                              value: terrain.id,
-                              child:
-                              Text(
-                                terrain.nom,
-                              ),
-                            );
-                          },
-                        )
-                            .toList(),
+                        items: terrains.map((terrain) {
+                          return DropdownMenuItem<String>(
+                            value: terrain.id,
+                            child: Text(terrain.nom),
+                          );
+                        }).toList(),
 
                         onChanged: (value) {
                           setDialogState(() {
-                            terrainSelectionne =
-                                value;
+                            terrainSelectionne = value;
                           });
                         },
                       ),
@@ -709,30 +608,20 @@ class _PlanningPageState extends State<PlanningPage> {
                 // ======================================================
                 // BOUTONS
                 // ======================================================
-
                 actions: [
-
                   TextButton(
                     onPressed: () {
-                      Navigator.of(
-                        dialogContext,
-                      ).pop(false);
+                      Navigator.of(dialogContext).pop(false);
                     },
-                    child:
-                    const Text('Annuler'),
+                    child: const Text('Annuler'),
                   ),
 
                   ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.of(
-                        dialogContext,
-                      ).pop(true);
+                      Navigator.of(dialogContext).pop(true);
                     },
-                    icon: const Icon(
-                      Icons.save,
-                    ),
-                    label:
-                    const Text('Enregistrer'),
+                    icon: const Icon(Icons.save),
+                    label: const Text('Enregistrer'),
                   ),
                 ],
               );
@@ -781,8 +670,7 @@ class _PlanningPageState extends State<PlanningPage> {
       // NOUVELLE HEURE
       // ============================================================
 
-      final nouvelleHeure =
-      heureController.text.trim();
+      final nouvelleHeure = heureController.text.trim();
 
       // ============================================================
       // MISE À JOUR DU MATCH
@@ -798,8 +686,7 @@ class _PlanningPageState extends State<PlanningPage> {
           match.ville = terrainChoisi.ville;
         }
 
-        match.modification= initialData;
-
+        match.modification = initialData;
       });
 
       // ============================================================
@@ -807,9 +694,7 @@ class _PlanningPageState extends State<PlanningPage> {
       // ============================================================
 
       try {
-          await FirestoreService.modifierMatch(
-          match: match,
-        );
+        await FirestoreService.modifierMatch(match: match);
 
         // ----------------------------------------------------------
         // Vérification après publication
@@ -819,13 +704,10 @@ class _PlanningPageState extends State<PlanningPage> {
           return;
         }
 
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.green,
-            content: Text(
-              'Match modifié.',
-            ),
+            content: Text('Match modifié.'),
           ),
         );
       } catch (e) {
@@ -837,13 +719,10 @@ class _PlanningPageState extends State<PlanningPage> {
           return;
         }
 
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.red,
-            content: Text(
-              'Erreur lors de la publication : $e',
-            ),
+            content: Text('Erreur lors de la publication : $e'),
           ),
         );
       }
@@ -856,9 +735,7 @@ class _PlanningPageState extends State<PlanningPage> {
     }
   }
 
-
   void _afficherModification(MatchFoot match) {
-
     final modification = match.modification?.trim();
 
     // Aucun message de modification :
@@ -873,22 +750,13 @@ class _PlanningPageState extends State<PlanningPage> {
         return AlertDialog(
           title: const Row(
             children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.orange,
-              ),
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
               SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Match modifié',
-                ),
-              ),
+              Expanded(child: Text('Match modifié')),
             ],
           ),
 
-          content: Text(
-            modification,
-          ),
+          content: Text(modification),
 
           actions: [
             TextButton(
@@ -903,11 +771,7 @@ class _PlanningPageState extends State<PlanningPage> {
     );
   }
 
-
-
   Future<void> ajouterMatch() async {
-
-
     DateTime? dateMatch;
     TimeOfDay? heureMatch;
 
@@ -921,8 +785,7 @@ class _PlanningPageState extends State<PlanningPage> {
 
     final formKey = GlobalKey<FormState>();
 
-    final terrains =
-    await TerrainService.chargerTerrains();
+    final terrains = await TerrainService.chargerTerrains();
 
     if (!mounted) {
       return;
@@ -935,9 +798,7 @@ class _PlanningPageState extends State<PlanningPage> {
     if (equipesDisponibles.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'La liste des équipes n\'est pas disponible.',
-          ),
+          content: Text('La liste des équipes n\'est pas disponible.'),
         ),
       );
       return;
@@ -946,15 +807,11 @@ class _PlanningPageState extends State<PlanningPage> {
     if (competitionsDisponibles.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'La liste des compétitions n\'est pas disponible.',
-          ),
+          content: Text('La liste des compétitions n\'est pas disponible.'),
         ),
       );
       return;
     }
-
-
 
     final resultat = await showDialog<MatchFoot>(
       context: context,
@@ -970,46 +827,45 @@ class _PlanningPageState extends State<PlanningPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-
                       // ----------------------------------------
                       // Équipe locale
                       // ----------------------------------------
                       DropdownButtonFormField<String>(
-                      decoration: InputDecoration(
+                        decoration: InputDecoration(
                           labelText: "Équipe locale",
                           prefixIcon: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Image.asset(
-                            'assets/images/logo_club.png',
-                            width: 32,
-                            height: 32,
-                            fit: BoxFit.contain,
+                            padding: const EdgeInsets.all(8.0),
+                            child: Image.asset(
+                              'assets/images/logo_club.png',
+                              width: 32,
+                              height: 32,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
+                        initialValue: equipeLocale,
+                        isExpanded: true,
+
+                        items: equipesDisponibles.map((equipe) {
+                          return DropdownMenuItem<String>(
+                            value: equipe,
+                            child: Text(equipe),
+                          );
+                        }).toList(),
+
+                        onChanged: (value) {
+                          setDialogState(() {
+                            equipeLocale = value;
+                          });
+                        },
+
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Sélectionnez une équipe";
+                          }
+                          return null;
+                        },
                       ),
-                      initialValue: equipeLocale,
-                      isExpanded: true,
-
-                      items: equipesDisponibles.map((equipe) {
-                        return DropdownMenuItem<String>(
-                          value: equipe,
-                          child: Text(equipe),
-                        );
-                      }).toList(),
-
-                      onChanged: (value) {
-                        setDialogState(() {
-                          equipeLocale = value;
-                        });
-                      },
-
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return "Sélectionnez une équipe";
-                        }
-                        return null;
-                      },
-                    ),
 
                       const SizedBox(height: 16),
 
@@ -1041,8 +897,8 @@ class _PlanningPageState extends State<PlanningPage> {
                             dateMatch == null
                                 ? "Sélectionner une date"
                                 : "${dateMatch!.day.toString().padLeft(2, '0')}/"
-                                "${dateMatch!.month.toString().padLeft(2, '0')}/"
-                                "${dateMatch!.year}",
+                                      "${dateMatch!.month.toString().padLeft(2, '0')}/"
+                                      "${dateMatch!.year}",
                           ),
                         ),
                       ),
@@ -1056,16 +912,18 @@ class _PlanningPageState extends State<PlanningPage> {
                         onTap: () async {
                           final heure = await showTimePicker(
                             context: context,
-                            initialTime: heureMatch ?? const TimeOfDay(hour: 15, minute: 0),
+                            initialTime:
+                                heureMatch ??
+                                const TimeOfDay(hour: 15, minute: 0),
                             initialEntryMode: TimePickerEntryMode.dial,
                             cancelText: 'Annuler',
                             confirmText: 'Valider',
                             helpText: 'Sélectionner l’heure',
                             builder: (context, child) {
                               return MediaQuery(
-                                data: MediaQuery.of(context).copyWith(
-                                  alwaysUse24HourFormat: true,
-                                ),
+                                data: MediaQuery.of(
+                                  context,
+                                ).copyWith(alwaysUse24HourFormat: true),
                                 child: child!,
                               );
                             },
@@ -1117,9 +975,8 @@ class _PlanningPageState extends State<PlanningPage> {
                       // TERRAIN
                       // ==================================================
                       // ==================================================
-// DOMICILE / EXTÉRIEUR
-// ==================================================
-
+                      // DOMICILE / EXTÉRIEUR
+                      // ==================================================
                       DropdownButtonFormField<bool>(
                         decoration: const InputDecoration(
                           labelText: 'Lieu du match',
@@ -1155,11 +1012,9 @@ class _PlanningPageState extends State<PlanningPage> {
                       const SizedBox(height: 16),
 
                       // ==================================================
-// TERRAIN / LIEU
-// ==================================================
-
+                      // TERRAIN / LIEU
+                      // ==================================================
                       if (matchDomicile)
-
                         DropdownButtonFormField<String>(
                           decoration: const InputDecoration(
                             labelText: 'Terrain',
@@ -1186,17 +1041,13 @@ class _PlanningPageState extends State<PlanningPage> {
                             return null;
                           },
                         )
-
                       else
-
                         Column(
                           children: [
-
                             TextFormField(
                               decoration: const InputDecoration(
                                 labelText: 'Stade / installation',
-                                prefixIcon:
-                                Icon(Icons.stadium_outlined),
+                                prefixIcon: Icon(Icons.stadium_outlined),
                               ),
 
                               onChanged: (value) {
@@ -1204,8 +1055,7 @@ class _PlanningPageState extends State<PlanningPage> {
                               },
 
                               validator: (value) {
-                                if (value == null ||
-                                    value.trim().isEmpty) {
+                                if (value == null || value.trim().isEmpty) {
                                   return 'Saisissez le lieu du match';
                                 }
                                 return null;
@@ -1225,8 +1075,7 @@ class _PlanningPageState extends State<PlanningPage> {
                               },
 
                               validator: (value) {
-                                if (value == null ||
-                                    value.trim().isEmpty) {
+                                if (value == null || value.trim().isEmpty) {
                                   return 'Saisissez la ville';
                                 }
                                 return null;
@@ -1288,9 +1137,7 @@ class _PlanningPageState extends State<PlanningPage> {
 
                     if (dateMatch == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Sélectionnez une date"),
-                        ),
+                        const SnackBar(content: Text("Sélectionnez une date")),
                       );
                       return;
                     }
@@ -1299,7 +1146,7 @@ class _PlanningPageState extends State<PlanningPage> {
                     // RECHERCHE DU TERRAIN SELECTIONE
                     // ============================================================
 
-                   /* Terrain? terrainSelectionne;
+                    /* Terrain? terrainSelectionne;
 
                     for (final terrain in terrains) {
                       if (terrain.id == stade) {
@@ -1342,9 +1189,7 @@ class _PlanningPageState extends State<PlanningPage> {
                       modification: '',
                     );
 
-
                     Navigator.pop(context, nouveauMatch);
-
                   },
                 ),
               ],
@@ -1362,21 +1207,16 @@ class _PlanningPageState extends State<PlanningPage> {
     }
 
     try {
-
       // ============================================================
       // Enregistrement dans Firestore
       // Le numéro M-AAAA-MM-JJ-XXX est généré ici
       // ============================================================
 
-     // await FirestoreService.testerCompteurMatch();
+      // await FirestoreService.testerCompteurMatch();
 
-      final numeroMatch = await FirestoreService.ajouterMatch(
-        match: resultat,
-      );
+      final numeroMatch = await FirestoreService.ajouterMatch(match: resultat);
 
-      debugPrint(
-        '[Administration] Match ajouté : $numeroMatch',
-      );
+      debugPrint('[Administration] Match ajouté : $numeroMatch');
 
       // ============================================================
       // Mise à jour de l'affichage local
@@ -1386,33 +1226,24 @@ class _PlanningPageState extends State<PlanningPage> {
         return;
       }
 
-    /*  setState(() {
+      /*  setState(() {
         tousLesMatchs.add(resultat);
         actualiserMatchsSemaine();
       });
 */
     } catch (e, stackTrace) {
-      debugPrint(
-        '[Administration] Erreur ajout match : $e',
-      );
+      debugPrint('[Administration] Erreur ajout match : $e');
 
-      debugPrint(
-        '$stackTrace',
-      );
+      debugPrint('$stackTrace');
 
       if (!mounted) {
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Erreur lors de l\'ajout du match : $e',
-          ),
-        ),
+        SnackBar(content: Text('Erreur lors de l\'ajout du match : $e')),
       );
     }
-
   }
 
   String formatHeure(TimeOfDay heure) {
@@ -1422,7 +1253,6 @@ class _PlanningPageState extends State<PlanningPage> {
     return '${h}H$m';
   }
 
-
   Future<void> supprimerMatch(MatchFoot match) async {
     final confirmer = await showDialog<bool>(
       context: context,
@@ -1431,7 +1261,7 @@ class _PlanningPageState extends State<PlanningPage> {
           title: const Text('Supprimer le match ?'),
           content: Text(
             '${match.equipeLocale} - ${match.equipeAdverse}\n'
-                '${match.dateMatch} à ${match.heureMatch}',
+            '${match.dateMatch} à ${match.heureMatch}',
           ),
           actions: [
             TextButton(
@@ -1475,24 +1305,20 @@ class _PlanningPageState extends State<PlanningPage> {
 
     debugPrint('Match a supprimer: $numeroMatch');
 
-    if (numeroMatch == null ||
-      numeroMatch.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.red,
-            content: Text(
-              'Impossible de supprimer le match : '
-              'numéro de match absent.',
-            ),
+    if (numeroMatch == null || numeroMatch.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            'Impossible de supprimer le match : '
+            'numéro de match absent.',
           ),
-         );
-        return;
+        ),
+      );
+      return;
     }
 
-    await FirestoreService.supprimerMatch(
-      numeroMatch: numeroMatch,
-    );
-
+    await FirestoreService.supprimerMatch(numeroMatch: numeroMatch);
   }
 
   void _semaineSwipee(int page) {
@@ -1527,6 +1353,7 @@ class _PlanningPageState extends State<PlanningPage> {
     });
   }
 
+  /*
   Widget _buildListeMatchs() {
     if (matchsSemaine.isEmpty) {
       return const Center(
@@ -1831,6 +1658,626 @@ class _PlanningPageState extends State<PlanningPage> {
         );
       },
     );
+  }*/
+
+  Widget _buildListeMatchs() {
+    if (vueLight) {
+      return _buildListeMatchsLight();
+    }
+
+    return _buildListeMatchsDetaillee();
+  }
+
+  // ===============================================================
+  // VUE DÉTAILLÉE
+  // ===============================================================
+
+  Widget _buildListeMatchsDetaillee() {
+    if (matchsSemaine.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.sports_soccer, size: 64, color: Colors.blue),
+            SizedBox(height: 16),
+            Text(
+              "Aucun match cette semaine",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              "Profitez-en pour vous reposer ! 😊",
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: matchsSemaine.length,
+      itemBuilder: (context, index) {
+        final match = matchsSemaine[index];
+
+        final bool afficherDate =
+            index == 0 || match.date != matchsSemaine[index - 1].date;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // =====================================================
+            // DATE
+            // =====================================================
+
+            if (afficherDate)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  formatDate(match.date),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+            // =====================================================
+            // CARD DU MATCH
+            // =====================================================
+            Card(
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              color: couleurMatch(match.couleur),
+              elevation: 1,
+
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+
+                onTap:
+                    match.modification != null &&
+                        match.modification!.trim().isNotEmpty
+                    ? () => _afficherModification(match)
+                    : null,
+
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
+
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+
+                    children: [
+                      // =================================================
+                      // HEURE + COMPÉTITION
+                      // =================================================
+
+                      Row(
+                        children: [
+                          const Icon(Icons.access_time, size: 16),
+
+                          const SizedBox(width: 5),
+
+                          Text(
+                            match.heureMatch,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          const Icon(Icons.emoji_events_outlined, size: 15),
+
+                          const SizedBox(width: 5),
+
+                          Expanded(
+                            child: Text(
+                              match.competition.trim().isEmpty
+                                  ? '-'
+                                  : match.competition,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                          ),
+
+                          // =================================================
+                          // MODIFICATION
+                          // =================================================
+                          if (match.modification != null &&
+                              match.modification!.trim().isNotEmpty &&
+                              (match.statut == null ||
+                                  match.statut == MatchFoot.statutNormal))
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.white,
+                                size: 21,
+                              ),
+                            ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // =================================================
+                      // ÉQUIPES
+                      // =================================================
+                      Text(
+                        '${match.equipeLocale} - '
+                        '${match.equipeAdverse}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // =================================================
+                      // STATUT
+                      // =================================================
+                      _buildStatutMatch(match),
+
+                      // =================================================
+                      // STADE / VILLE
+                      // =================================================
+                      if (match.stade.trim().isNotEmpty ||
+                          match.ville.trim().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.stadium_outlined, size: 15),
+
+                              const SizedBox(width: 5),
+
+                              Expanded(
+                                child: Text(
+                                  [
+                                    if (match.stade.trim().isNotEmpty)
+                                      match.stade,
+
+                                    if (match.ville.trim().isNotEmpty)
+                                      match.ville,
+                                  ].join(' - '),
+
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // =================================================
+                      // ADMINISTRATION
+                      // =================================================
+                      if (widget.peutGererMatchs)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 19),
+                                tooltip: 'Modifier le match',
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 36,
+                                  minHeight: 36,
+                                ),
+                                onPressed: () {
+                                  _modifierMatch(match);
+                                },
+                              ),
+
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 20,
+                                ),
+                                tooltip: 'Supprimer le match',
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 36,
+                                  minHeight: 36,
+                                ),
+                                onPressed: () {
+                                  supprimerMatch(match);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ===============================================================
+  // VUE LIGHT / COMPACTE
+  // ===============================================================
+
+  Widget _buildListeMatchsLight() {
+    if (matchsSemaine.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.sports_soccer, size: 64, color: Colors.blue),
+            SizedBox(height: 16),
+            Text(
+              "Aucun match cette semaine",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              "Profitez-en pour vous reposer ! 😊",
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: matchsSemaine.length,
+
+      itemBuilder: (context, index) {
+        final match = matchsSemaine[index];
+
+        final bool afficherDate =
+            index == 0 || match.date != matchsSemaine[index - 1].date;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // =====================================================
+            // DATE
+            // =====================================================
+
+            if (afficherDate)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 5),
+                child: Text(
+                  formatDate(match.date),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+            // =====================================================
+            // CARD LIGHT
+            // =====================================================
+            Card(
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              color: couleurMatch(match.couleur),
+              elevation: 1,
+
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+
+                onTap: () {
+                  _afficherDetailsMatch(match);
+                },
+
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 9,
+                  ),
+
+                  child: Row(
+                    children: [
+                      // =================================================
+                      // HEURE
+                      // =================================================
+
+                      SizedBox(
+                        width: 48,
+                        child: Text(
+                          match.heureMatch,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 5),
+
+                      // =================================================
+                      // ÉQUIPES
+                      // =================================================
+                      Expanded(
+                        child: Text(
+                          '${match.equipeLocale} - '
+                          '${match.equipeAdverse}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+
+                      // =================================================
+                      // INDICATEUR MODIFICATION
+                      // =================================================
+                      if (match.modification != null &&
+                          match.modification!.trim().isNotEmpty &&
+                          (match.statut == null ||
+                              match.statut == MatchFoot.statutNormal))
+                        const Padding(
+                          padding: EdgeInsets.only(left: 5),
+                          child: Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.white,
+                            size: 19,
+                          ),
+                        ),
+
+                      // =================================================
+                      // STATUT
+                      // =================================================
+                      if (match.statut != null &&
+                          match.statut != MatchFoot.statutNormal)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 5),
+                          child: Icon(Icons.info_outline, size: 19),
+                        ),
+
+                      // =================================================
+                      // FLÈCHE
+                      // =================================================
+                      const Padding(
+                        padding: EdgeInsets.only(left: 3),
+                        child: Icon(Icons.chevron_right, size: 20),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ===============================================================
+  // DÉTAILS D'UN MATCH EN VUE LIGHT
+  // ===============================================================
+
+  void _afficherDetailsMatch(MatchFoot match) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.sports_soccer, size: 25),
+              const SizedBox(width: 10),
+
+              Expanded(
+                child: Text(
+                  '${match.equipeLocale} - '
+                  '${match.equipeAdverse}',
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // =================================================
+                // DATE
+                // =================================================
+
+                _ligneDetailMatch(
+                  Icons.calendar_month,
+                  'Date',
+                  match.dateMatch,
+                ),
+
+                const SizedBox(height: 10),
+
+                // =================================================
+                // HEURE
+                // =================================================
+                _ligneDetailMatch(Icons.access_time, 'Heure', match.heureMatch),
+
+                const SizedBox(height: 10),
+
+                // =================================================
+                // ÉQUIPES
+                // =================================================
+                _ligneDetailMatch(
+                  Icons.groups,
+                  'Match',
+                  '${match.equipeLocale} - '
+                      '${match.equipeAdverse}',
+                ),
+
+                const SizedBox(height: 10),
+
+                // =================================================
+                // COMPÉTITION
+                // =================================================
+                if (match.competition.trim().isNotEmpty)
+                  _ligneDetailMatch(
+                    Icons.emoji_events_outlined,
+                    'Compétition',
+                    match.competition,
+                  ),
+
+                if (match.competition.trim().isNotEmpty)
+                  const SizedBox(height: 10),
+
+                // =================================================
+                // STADE
+                // =================================================
+                if (match.stade.trim().isNotEmpty)
+                  _ligneDetailMatch(
+                    Icons.stadium_outlined,
+                    'Stade',
+                    match.stade,
+                  ),
+
+                if (match.stade.trim().isNotEmpty) const SizedBox(height: 10),
+
+                // =================================================
+                // VILLE
+                // =================================================
+                if (match.ville.trim().isNotEmpty)
+                  _ligneDetailMatch(
+                    Icons.location_on_outlined,
+                    'Ville',
+                    match.ville,
+                  ),
+
+                // =================================================
+                // STATUT
+                // =================================================
+                if (match.statut != null &&
+                    match.statut != MatchFoot.statutNormal) ...[
+                  const SizedBox(height: 12),
+
+                  _buildStatutMatch(match),
+                ],
+
+                // =================================================
+                // MODIFICATION
+                // =================================================
+                if (match.modification != null &&
+                    match.modification!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 15),
+
+                  const Divider(),
+
+                  const SizedBox(height: 8),
+
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.orange,
+                        size: 21,
+                      ),
+                      SizedBox(width: 7),
+                      Text(
+                        'Modification',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 7),
+
+                  Text(
+                    match.modification!,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // =======================================================
+          // ADMINISTRATION
+          // =======================================================
+          actions: [
+            if (widget.peutGererMatchs)
+              IconButton(
+                tooltip: 'Modifier le match',
+                icon: const Icon(Icons.edit),
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  _modifierMatch(match);
+                },
+              ),
+
+            if (widget.peutGererMatchs)
+              IconButton(
+                tooltip: 'Supprimer le match',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  supprimerMatch(match);
+                },
+              ),
+
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Fermer'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ===============================================================
+  // LIGNE D'INFORMATION DU DIALOGUE
+  // ===============================================================
+
+  Widget _ligneDetailMatch(IconData icone, String libelle, String valeur) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icone, size: 20),
+
+        const SizedBox(width: 10),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                libelle,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 2),
+
+              Text(valeur, style: const TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -1889,106 +2336,153 @@ class _PlanningPageState extends State<PlanningPage> {
           overflow: TextOverflow.ellipsis,
         ),
 
+        actions: [
+          if (widget.peutGererMatchs)
+            IconButton(
+              onPressed: ajouterMatch,
+              icon: const Icon(Icons.add),
+              tooltip: 'Ajouter un match',
+            ),
+        ],
+
         // Deuxième ligne
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(55),
           child: SizedBox(
             height: 55,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
 
-                //const Text("Date:"),
-                // -------------------------------------------------
-                // Semaine précédente
-                // -------------------------------------------------
-                IconButton(
-                  icon: const Icon(Icons.chevron_left),
-                  tooltip: 'Semaine précédente',
-                  onPressed: semainePrecedente
+                // =====================================================
+                // GAUCHE : VUE COMPACTE / DÉTAILLÉE
+                // =====================================================
+
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      isSelected: vueLight,
+                      selectedIcon: const Icon(
+                        Icons.view_stream,
+                      ),
+                      icon: const Icon(
+                        Icons.view_agenda_outlined,
+                      ),
+                      tooltip: vueLight
+                          ? 'Vue détaillée'
+                          : 'Vue compacte',
+                      onPressed: () {
+                        setState(() {
+                          vueLight = !vueLight;
+                        });
+                      },
+                    ),
+                  ),
                 ),
 
-                //const SizedBox(width: 10),
+                // =====================================================
+                // CENTRE : NAVIGATION DES SEMAINES
+                // =====================================================
 
-                IconButton(
-                  icon: const Icon(Icons.calendar_month),
-                  tooltip: "Choisir une date",
-                  onPressed: choisirDate,
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+
+                      // Semaine précédente
+                      IconButton(
+                        icon: const Icon(
+                          Icons.chevron_left,
+                        ),
+                        tooltip: 'Semaine précédente',
+                        onPressed: semainePrecedente,
+                      ),
+
+                      // Calendrier
+                      IconButton(
+                        icon: const Icon(
+                          Icons.calendar_month,
+                        ),
+                        tooltip: 'Choisir une date',
+                        onPressed: choisirDate,
+                      ),
+
+                      // Semaine suivante
+                      IconButton(
+                        icon: const Icon(
+                          Icons.chevron_right,
+                        ),
+                        tooltip: 'Semaine suivante',
+                        onPressed: semaineSuivante,
+                      ),
+                    ],
+                  ),
                 ),
 
-                //const SizedBox(width: 20),
+                // =====================================================
+                // DROITE : FILTRE DOMICILE
+                // =====================================================
 
-                // -------------------------------------------------
-                // Semaine suivante
-                // -------------------------------------------------
-                IconButton(
-                  icon: const Icon(Icons.chevron_right),
-                  tooltip: 'Semaine suivante',
-                  onPressed: semaineSuivante,
-                ),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
 
-                const SizedBox(width: 20),
+                      Text(
+                        uniquementDomicile
+                            ? '🏠 Domicile'
+                            : '🏠 Tous',
+                      ),
 
-                Text(
-                  uniquementDomicile
-                      ? "🏠 Domicile"
-                      : "🏠 Tous",
-                ),
+                      Switch(
+                        value: uniquementDomicile,
+                        onChanged: (value) {
+                          setState(() {
+                            uniquementDomicile = value;
+                          });
 
-                Switch(
-                  value: uniquementDomicile,
-                  onChanged: (value) {
-                    setState(() {
-                      uniquementDomicile = value;
-                    });
-                    chargerPlanning(semaineSelectionnee);
-                  },
+                          chargerPlanning(
+                            semaineSelectionnee,
+                          );
+                        },
+                      ),
+
+                      const SizedBox(width: 8),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
         ),
       ),
-      // 👇 Nouvelle action principale
-      floatingActionButton: widget.peutGererMatchs
-          ? FloatingActionButton.extended(
-        onPressed: ajouterMatch,
-        icon: const Icon(Icons.add),
-        label: const Text("Ajouter un match"),
-        tooltip: "Ajouter un match",
-      )
-          : null,
+
       body: PageView(
-      controller: _semainePageController,
+        controller: _semainePageController,
 
-      // ---------------------------------------------------------
-      // Détection du balayage
-      // ---------------------------------------------------------
+        // ---------------------------------------------------------
+        // Détection du balayage
+        // ---------------------------------------------------------
+        onPageChanged: _semaineSwipee,
 
-      onPageChanged: _semaineSwipee,
+        children: [
+          // =======================================================
+          // SEMAINE PRÉCÉDENTE
+          // =======================================================
 
-      children: [
-        // =======================================================
-        // SEMAINE PRÉCÉDENTE
-        // =======================================================
+          _buildListeMatchs(),
 
-        _buildListeMatchs(),
+          // =======================================================
+          // SEMAINE ACTUELLE
+          // =======================================================
+          _buildListeMatchs(),
 
-        // =======================================================
-        // SEMAINE ACTUELLE
-        // =======================================================
-
-        _buildListeMatchs(),
-
-        // =======================================================
-        // SEMAINE SUIVANTE
-        // =======================================================
-
-        _buildListeMatchs(),
-      ],
-    ),
-
-
+          // =======================================================
+          // SEMAINE SUIVANTE
+          // =======================================================
+          _buildListeMatchs(),
+        ],
+      ),
     );
   }
 }
