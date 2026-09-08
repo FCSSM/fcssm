@@ -390,7 +390,14 @@ List<List<dynamic>> lignes,
     // U17 / U16
     // ------------------------------------------------------------
     if (categorieNormalisee.contains('U17 - U16')) {
-      return 'U17';
+      if (numero == null) {
+        return 'U17';
+      }
+
+      // 1, 2 => U17 A / B
+      if (numero >= 1 && numero <= 2) {
+        return 'U17 ${_numeroVersLettre(numero)}';
+      }
     }
 
     // ------------------------------------------------------------
@@ -402,12 +409,12 @@ List<List<dynamic>> lignes,
       }
 
       // 1, 2 => U15 A / B
-      if (numero >= 1 && numero <= 2) {
-        return 'U15 ${_numeroVersLettre(numero)}';
+      if (numero == 1 ) {
+        return 'U15';
       }
 
       // 21 ou 3 => U14
-      if (numero == 21 || numero == 3) {
+      if (numero == 22 || numero == 21) {
         return 'U14';
       }
 
@@ -428,7 +435,7 @@ List<List<dynamic>> lignes,
       }
 
       // 21 => U12
-      if (numero == 21) {
+      if (numero == 23) {
         return 'U12';
       }
 

@@ -630,7 +630,6 @@ class _PlanningEquipesState
         const SizedBox(height: 8),
 
         if (_equipeSelectionnee != null)
-
           Row(
             children: [
 
@@ -638,14 +637,66 @@ class _PlanningEquipesState
               // INTERRUPTEUR
               // =============================================================
 
-             /* Switch(
-                value: _matchsAVenirUniquement,
-                onChanged: (value) {
-                  setState(() {
-                    _matchsAVenirUniquement = value;
-                  });
-                },
-              ),*/
+              Transform.scale(
+                scale: 0.75,
+                child: Switch(
+                  value: _matchsAVenirUniquement,
+                  onChanged: (value) {
+                    setState(() {
+                      _matchsAVenirUniquement = value;
+                    });
+                  },
+                ),
+              ),
+
+              const SizedBox(width: 4),
+
+              // =============================================================
+              // LIBELLÉ
+              // =============================================================
+
+              const Flexible(
+                child: Text(
+                  'Masquer les matchs passés',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+
+              // =============================================================
+              // COMPTEUR
+              // =============================================================
+
+              const SizedBox(width: 5),
+
+              const Icon(
+                Icons.calendar_month,
+                size: 18,
+              ),
+
+              const SizedBox(width: 5),
+
+              Text(
+                '${matchs.length} match'
+                    '${matchs.length > 1 ? 's' : ''}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+      /*    Row(
+            children: [
+
+              // =============================================================
+              // INTERRUPTEUR
+              // =============================================================
+
               Transform.scale(
                 scale: 0.75,
                 child: Switch(
@@ -692,7 +743,7 @@ class _PlanningEquipesState
                 ),
               ),
             ],
-          ),
+          ),*/
       ],
     );
   }

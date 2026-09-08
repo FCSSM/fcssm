@@ -2351,110 +2351,108 @@ class _PlanningPageState extends State<PlanningPage> {
           child: SizedBox(
             height: 55,
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
 
                 // =====================================================
-                // GAUCHE : VUE COMPACTE / DÉTAILLÉE
+                // VUE COMPACTE / DÉTAILLÉE
                 // =====================================================
 
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      isSelected: vueLight,
-                      selectedIcon: const Icon(
-                        Icons.view_stream,
-                      ),
-                      icon: const Icon(
-                        Icons.view_agenda_outlined,
-                      ),
-                      tooltip: vueLight
-                          ? 'Vue détaillée'
-                          : 'Vue compacte',
-                      onPressed: () {
-                        setState(() {
-                          vueLight = !vueLight;
-                        });
-                      },
-                    ),
+                IconButton(
+                  isSelected: vueLight,
+                  selectedIcon: const Icon(
+                    Icons.view_stream,
                   ),
+                  icon: const Icon(
+                    Icons.view_agenda_outlined,
+                  ),
+                  tooltip: vueLight
+                      ? 'Vue détaillée'
+                      : 'Vue compacte',
+                  onPressed: () {
+                    setState(() {
+                      vueLight = !vueLight;
+                    });
+                  },
                 ),
 
+                // Espace
+                const SizedBox(width: 8),
+
                 // =====================================================
-                // CENTRE : NAVIGATION DES SEMAINES
+                // SEMAINE PRÉCÉDENTE
                 // =====================================================
 
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-
-                      // Semaine précédente
-                      IconButton(
-                        icon: const Icon(
-                          Icons.chevron_left,
-                        ),
-                        tooltip: 'Semaine précédente',
-                        onPressed: semainePrecedente,
-                      ),
-
-                      // Calendrier
-                      IconButton(
-                        icon: const Icon(
-                          Icons.calendar_month,
-                        ),
-                        tooltip: 'Choisir une date',
-                        onPressed: choisirDate,
-                      ),
-
-                      // Semaine suivante
-                      IconButton(
-                        icon: const Icon(
-                          Icons.chevron_right,
-                        ),
-                        tooltip: 'Semaine suivante',
-                        onPressed: semaineSuivante,
-                      ),
-                    ],
+                IconButton(
+                  icon: const Icon(
+                    Icons.chevron_left,
                   ),
+                  tooltip: 'Semaine précédente',
+                  onPressed: semainePrecedente,
                 ),
 
+                // Espace
+                const SizedBox(width: 4),
+
                 // =====================================================
-                // DROITE : FILTRE DOMICILE
+                // CALENDRIER
                 // =====================================================
 
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-
-                      Text(
-                        uniquementDomicile
-                            ? '🏠 Domicile'
-                            : '🏠 Tous',
-                      ),
-
-                      Switch(
-                        value: uniquementDomicile,
-                        onChanged: (value) {
-                          setState(() {
-                            uniquementDomicile = value;
-                          });
-
-                          chargerPlanning(
-                            semaineSelectionnee,
-                          );
-                        },
-                      ),
-
-                      const SizedBox(width: 8),
-                    ],
+                IconButton(
+                  icon: const Icon(
+                    Icons.calendar_month,
                   ),
+                  tooltip: 'Choisir une date',
+                  onPressed: choisirDate,
+                ),
+
+                // Espace
+                const SizedBox(width: 4),
+
+                // =====================================================
+                // SEMAINE SUIVANTE
+                // =====================================================
+
+                IconButton(
+                  icon: const Icon(
+                    Icons.chevron_right,
+                  ),
+                  tooltip: 'Semaine suivante',
+                  onPressed: semaineSuivante,
+                ),
+
+                // Espace
+                const SizedBox(width: 12),
+
+                // =====================================================
+                // FILTRE DOMICILE
+                // =====================================================
+
+                Text(
+                  uniquementDomicile
+                      ? '🏠 Domicile'
+                      : '🏠 Tous',
+                ),
+
+                const SizedBox(width: 4),
+
+                Switch(
+                  value: uniquementDomicile,
+                  onChanged: (value) {
+                    setState(() {
+                      uniquementDomicile = value;
+                    });
+
+                    chargerPlanning(
+                      semaineSelectionnee,
+                    );
+                  },
                 ),
               ],
             ),
           ),
         ),
+
       ),
 
       body: PageView(
