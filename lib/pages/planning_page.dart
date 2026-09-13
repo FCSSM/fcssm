@@ -274,31 +274,6 @@ class _PlanningPageState extends State<PlanningPage> {
     }
   }
 
-  /*void actualiserMatchsSemaine() {
-
-    matchsSemaine = tousLesMatchs.where((match) {
-      if (match.noSemaine != semaineSelectionnee) {
-        return false;
-      }
-
-      if (uniquementDomicile && !match.estDomicile) {
-        return false;
-      }
-
-      return true;
-    }).toList();
-    // ---------------------------------------------
-    // Tri de la liste affichée
-    // ---------------------------------------------
-    matchsSemaine.sort((a, b) {
-      final cmp = a.date.compareTo(b.date);
-      if (cmp != 0) {
-        return cmp;
-      }
-      return a.heureEnMinutes.compareTo(b.heureEnMinutes);
-    });
-  }*/
-
   void actualiserMatchsSemaine() {
     // ============================================================
     // CALCUL DU LUNDI DE LA SEMAINE SÉLECTIONNÉE
@@ -440,6 +415,17 @@ class _PlanningPageState extends State<PlanningPage> {
 
     String statutSelectionne = match.statut ?? MatchFoot.statutNormal;
 
+    final parties = match.heureMatch.split('H');
+
+    TimeOfDay? heureMatch;
+
+    if (parties.length == 2) {
+      heureMatch = TimeOfDay(
+        hour: int.tryParse(parties[0]) ?? 15,
+        minute: int.tryParse(parties[1]) ?? 0,
+      );
+    }
+
     final heureController = TextEditingController(text: match.heureMatch);
 
     try {
@@ -563,7 +549,53 @@ class _PlanningPageState extends State<PlanningPage> {
                       // ==================================================
                       // HEURE
                       // ==================================================
-                      TextField(
+                      InkWell(
+                        onTap: () async {
+                          final parties = heureController.text.split('H');
+
+                          final heureInitiale = parties.length == 2
+                              ? TimeOfDay(
+                            hour: int.tryParse(parties[0]) ?? 15,
+                            minute: int.tryParse(parties[1]) ?? 0,
+                          )
+                              : const TimeOfDay(hour: 15, minute: 0);
+
+                          final heure = await showTimePicker(
+                            context: context,
+                            initialTime: heureInitiale,
+                            initialEntryMode: TimePickerEntryMode.dial,
+                            cancelText: 'Annuler',
+                            confirmText: 'Valider',
+                            helpText: 'Sélectionner l’heure',
+                            builder: (context, child) {
+                              return MediaQuery(
+                                data: MediaQuery.of(
+                                  context,
+                                ).copyWith(alwaysUse24HourFormat: true),
+                                child: child!,
+                              );
+                            },
+                          );
+
+                          if (heure != null) {
+                            setDialogState(() {
+                              heureMatch = heure;
+                            });
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Heure du match',
+                            prefixIcon: Icon(Icons.access_time),
+                          ),
+                          child: Text(
+                            heureMatch == null
+                                ? "Sélectionner une heure"
+                                : formatHeure(heureMatch!),
+                          ),
+                        ),
+                      ),
+                     /* TextField(
                         controller: heureController,
 
                         keyboardType: TextInputType.datetime,
@@ -573,7 +605,7 @@ class _PlanningPageState extends State<PlanningPage> {
                           hintText: '20:00',
                           border: OutlineInputBorder(),
                         ),
-                      ),
+                      ),*/
 
                       const SizedBox(height: 16),
 
@@ -670,7 +702,10 @@ class _PlanningPageState extends State<PlanningPage> {
       // NOUVELLE HEURE
       // ============================================================
 
-      final nouvelleHeure = heureController.text.trim();
+      //final nouvelleHeure = heureController.text.trim();
+      final nouvelleHeure = heureMatch == null
+          ? match.heureMatch
+          : formatHeure(heureMatch!);
 
       // ============================================================
       // MISE À JOUR DU MATCH
@@ -685,8 +720,10 @@ class _PlanningPageState extends State<PlanningPage> {
           match.stade = terrainChoisi.nom;
           match.ville = terrainChoisi.ville;
         }
-
-        match.modification = initialData;
+        // on enregistrement une modification uniquement si le match est maintenu
+        if (statutSelectionne=='Match normal') {
+          match.modification = initialData;
+        }
       });
 
       // ============================================================
@@ -1353,313 +1390,6 @@ class _PlanningPageState extends State<PlanningPage> {
     });
   }
 
-  /*
-  Widget _buildListeMatchs() {
-    if (matchsSemaine.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.sports_soccer,
-              size: 64,
-              color: Colors.blue,
-            ),
-            SizedBox(height: 16),
-            Text(
-              "Aucun match cette semaine",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              "Profitez-en pour vous reposer ! 😊",
-              style: TextStyle(
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: matchsSemaine.length,
-
-      itemBuilder: (context, index) {
-        final match = matchsSemaine[index];
-
-        final bool afficherDate =
-            index == 0 ||
-                match.date != matchsSemaine[index - 1].date;
-
-        return Column(
-          crossAxisAlignment:
-          CrossAxisAlignment.start,
-
-          children: [
-            // ---------------------------------------------------
-            // DATE
-            // ---------------------------------------------------
-
-            if (afficherDate)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  16,
-                  16,
-                  16,
-                  8,
-                ),
-                child: Text(
-                  formatDate(match.date),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-            // ---------------------------------------------------
-            // CARD DU MATCH
-            // ---------------------------------------------------
-            Card(
-              margin: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
-              ),
-              color: couleurMatch(match.couleur),
-              elevation: 1,
-
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-
-                onTap:
-                match.modification != null &&
-                    match.modification!.trim().isNotEmpty
-                    ? () => _afficherModification(match)
-                    : null,
-
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 7,
-                  ),
-
-                  child: Column(
-                    crossAxisAlignment:
-                    CrossAxisAlignment.start,
-
-                    children: [
-
-                      // ===============================================================
-                      // HEURE + COMPÉTITION
-                      // ===============================================================
-
-                      Row(
-                        children: [
-
-                          const Icon(
-                            Icons.access_time,
-                            size: 16,
-                          ),
-
-                          const SizedBox(width: 5),
-
-                          Text(
-                            match.heureMatch,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          const SizedBox(width: 10),
-
-                          const Icon(
-                            Icons.emoji_events_outlined,
-                            size: 15,
-                          ),
-
-                          const SizedBox(width: 5),
-
-                          Expanded(
-                            child: Text(
-                              match.competition.trim().isEmpty
-                                  ? '-'
-                                  : match.competition,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-
-                          // =========================================================
-                          // ⚠️ MODIFICATION
-                          // =========================================================
-
-                          if (match.modification != null &&
-                              match.modification!.trim().isNotEmpty &&
-                              (match.statut == null ||
-                                  match.statut ==
-                                      MatchFoot.statutNormal))
-                            const Padding(
-                              padding: EdgeInsets.only(left: 6),
-                              child: Icon(
-                                Icons.warning_amber_rounded,
-                                color: Colors.white,
-                                size: 21,
-                              ),
-                            ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 4),
-
-                      // ===============================================================
-                      // ÉQUIPES
-                      // ===============================================================
-
-                      Text(
-                        '${match.equipeLocale} - '
-                            '${match.equipeAdverse}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      const SizedBox(height: 4),
-
-                      // ===============================================================
-                      // STATUT
-                      // ===============================================================
-
-                      _buildStatutMatch(match),
-
-                      // ===============================================================
-                      // STADE / VILLE
-                      // ===============================================================
-
-                      if (match.stade.trim().isNotEmpty ||
-                          match.ville.trim().isNotEmpty)
-
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: 3,
-                          ),
-
-                          child: Row(
-                            children: [
-
-                              const Icon(
-                                Icons.stadium_outlined,
-                                size: 15,
-                              ),
-
-                              const SizedBox(width: 5),
-
-                              Expanded(
-                                child: Text(
-                                  [
-                                    if (match.stade
-                                        .trim()
-                                        .isNotEmpty)
-                                      match.stade,
-
-                                    if (match.ville
-                                        .trim()
-                                        .isNotEmpty)
-                                      match.ville,
-                                  ].join(' - '),
-
-                                  maxLines: 1,
-                                  overflow:
-                                  TextOverflow.ellipsis,
-
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                      // ===============================================================
-                      // ADMINISTRATION
-                      // ===============================================================
-
-                      if (widget.peutGererMatchs)
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: 3,
-                          ),
-
-                          child: Row(
-                            mainAxisAlignment:
-                            MainAxisAlignment.end,
-
-                            children: [
-
-                              // Modifier
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit,
-                                  size: 19,
-                                ),
-                                tooltip: 'Modifier le match',
-                                visualDensity:
-                                VisualDensity.compact,
-                                padding: EdgeInsets.zero,
-                                constraints:
-                                const BoxConstraints(
-                                  minWidth: 36,
-                                  minHeight: 36,
-                                ),
-                                onPressed: () {
-                                  _modifierMatch(match);
-                                },
-                              ),
-
-                              // Supprimer
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  size: 20,
-                                ),
-                                tooltip: 'Supprimer le match',
-                                visualDensity:
-                                VisualDensity.compact,
-                                padding: EdgeInsets.zero,
-                                constraints:
-                                const BoxConstraints(
-                                  minWidth: 36,
-                                  minHeight: 36,
-                                ),
-                                onPressed: () {
-                                  supprimerMatch(match);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          ],
-        );
-      },
-    );
-  }*/
-
   Widget _buildListeMatchs() {
     if (vueLight) {
       return _buildListeMatchsLight();
@@ -1792,12 +1522,39 @@ class _PlanningPageState extends State<PlanningPage> {
                                   match.statut == MatchFoot.statutNormal))
                             const Padding(
                               padding: EdgeInsets.only(left: 6),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Color(0xFFB71C1C),
+                                  shape: BoxShape.circle,
+                                  border: Border.fromBorderSide(
+                                    BorderSide(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.all(2),
+                                  child: Icon(
+                                    Icons.priority_high_rounded,
+                                    color: Colors.white,
+                                    size: 17,
+                                  ),
+                                ),
+                              ),
+                            ),
+                         /* if (match.modification != null &&
+                              match.modification!.trim().isNotEmpty &&
+                              (match.statut == null ||
+                                  match.statut == MatchFoot.statutNormal))
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
                               child: Icon(
                                 Icons.warning_amber_rounded,
                                 color: Colors.white,
                                 size: 21,
                               ),
-                            ),
+                            ),*/
                         ],
                       ),
 
@@ -2028,11 +1785,26 @@ class _PlanningPageState extends State<PlanningPage> {
                           (match.statut == null ||
                               match.statut == MatchFoot.statutNormal))
                         const Padding(
-                          padding: EdgeInsets.only(left: 5),
-                          child: Icon(
-                            Icons.warning_amber_rounded,
-                            color: Colors.white,
-                            size: 19,
+                          padding: EdgeInsets.only(left: 6),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Color(0xFFB71C1C),
+                              shape: BoxShape.circle,
+                              border: Border.fromBorderSide(
+                                BorderSide(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.all(2),
+                              child: Icon(
+                                Icons.priority_high_rounded,
+                                color: Colors.white,
+                                size: 15,
+                              ),
+                            ),
                           ),
                         ),
 
@@ -2040,12 +1812,10 @@ class _PlanningPageState extends State<PlanningPage> {
                       // STATUT
                       // =================================================
                       if (match.statut != null &&
-                          match.statut != MatchFoot.statutNormal)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 5),
-                          child: Icon(Icons.info_outline, size: 19),
-                        ),
-
+                          match.statut != MatchFoot.statutNormal
+                      )
+                          _buildStatutMatch(match)
+                      else
                       // =================================================
                       // FLÈCHE
                       // =================================================
@@ -2261,7 +2031,7 @@ class _PlanningPageState extends State<PlanningPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+             /*Text(
                 libelle,
                 style: const TextStyle(
                   fontSize: 11,
@@ -2271,7 +2041,7 @@ class _PlanningPageState extends State<PlanningPage> {
               ),
 
               const SizedBox(height: 2),
-
+              */
               Text(valeur, style: const TextStyle(fontSize: 14)),
             ],
           ),
