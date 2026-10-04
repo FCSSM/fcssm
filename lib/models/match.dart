@@ -14,7 +14,7 @@ class MatchFoot {
 
   String? numeroMatch;
   final String equipeLocale;
-  final String recevant;
+  String recevant;
   String dateMatch;
   String heureMatch;
   final String equipeAdverse;

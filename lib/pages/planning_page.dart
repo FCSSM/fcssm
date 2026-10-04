@@ -403,17 +403,16 @@ class _PlanningPageState extends State<PlanningPage> {
     actualiserMatchsSemaine();
   }
 
-  Future<void> _modifierMatch(MatchFoot match) async {
-    // ============================================================
-    // CONTRÔLEUR HEURE
-    // ============================================================
+
+  /*Future<void> _modifierMatch(MatchFoot match) async {
     final initialData =
         'Match initial:\n'
         '📅 ${match.dateMatch}\n'
         '🕐 ${match.heureMatch}\n'
         '📍 ${match.stade}';
 
-    String statutSelectionne = match.statut ?? MatchFoot.statutNormal;
+    String statutSelectionne =
+        match.statut ?? MatchFoot.statutNormal;
 
     final parties = match.heureMatch.split('H');
 
@@ -426,41 +425,41 @@ class _PlanningPageState extends State<PlanningPage> {
       );
     }
 
-    final heureController = TextEditingController(text: match.heureMatch);
+    final heureController =
+    TextEditingController(text: match.heureMatch);
+
+    // ---------------------------------------------------------------------------
+    // Champs utilisés pour un match à l'extérieur
+    // ---------------------------------------------------------------------------
+
+    final stadeController =
+    TextEditingController(text: match.stade);
+
+    final villeController =
+    TextEditingController(text: match.ville);
 
     try {
-      // ============================================================
-      // DATE ACTUELLE
-      // ============================================================
+      DateTime dateSelectionnee =
+      _parseDateFrancaise(match.dateMatch);
 
-      DateTime dateSelectionnee = _parseDateFrancaise(match.dateMatch);
+      // Les terrains FCSSM ne sont utiles que pour les matchs à domicile.
+      final terrains = match.estDomicile
+          ? await TerrainService.chargerTerrains()
+          : <Terrain>[];
 
-      // ============================================================
-      // CHARGEMENT DES TERRAINS
-      // ============================================================
-
-      final terrains = await TerrainService.chargerTerrains();
-
-      if (!mounted) {
-        return;
-      }
-
-      // ============================================================
-      // TERRAIN ACTUEL
-      // ============================================================
+      if (!mounted) return;
 
       String? terrainSelectionne;
 
-      for (final terrain in terrains) {
-        if (terrain.nom == match.stade) {
-          terrainSelectionne = terrain.id;
-          break;
+      // Recherche du terrain actuel uniquement pour un match à domicile.
+      if (match.estDomicile) {
+        for (final terrain in terrains) {
+          if (terrain.nom == match.stade) {
+            terrainSelectionne = terrain.id;
+            break;
+          }
         }
       }
-
-      // ============================================================
-      // DIALOGUE
-      // ============================================================
 
       final resultat = await showDialog<bool>(
         context: context,
@@ -474,6 +473,11 @@ class _PlanningPageState extends State<PlanningPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+
+                      // =========================================================
+                      // STATUT
+                      // =========================================================
+
                       DropdownButtonFormField<String>(
                         initialValue: statutSelectionne,
                         decoration: const InputDecoration(
@@ -509,9 +513,10 @@ class _PlanningPageState extends State<PlanningPage> {
 
                       const SizedBox(height: 16),
 
-                      // ==================================================
+                      // =========================================================
                       // DATE
-                      // ==================================================
+                      // =========================================================
+
                       InkWell(
                         onTap: () async {
                           final date = await showDatePicker(
@@ -528,50 +533,61 @@ class _PlanningPageState extends State<PlanningPage> {
                             });
                           }
                         },
-
                         child: InputDecorator(
                           decoration: const InputDecoration(
                             labelText: 'Date',
                             border: OutlineInputBorder(),
-                            suffixIcon: Icon(Icons.calendar_month),
+                            suffixIcon:
+                            Icon(Icons.calendar_month),
                           ),
-
                           child: Text(
                             '${dateSelectionnee.day.toString().padLeft(2, '0')}/'
-                            '${dateSelectionnee.month.toString().padLeft(2, '0')}/'
-                            '${dateSelectionnee.year}',
+                                '${dateSelectionnee.month.toString().padLeft(2, '0')}/'
+                                '${dateSelectionnee.year}',
                           ),
                         ),
                       ),
 
                       const SizedBox(height: 16),
 
-                      // ==================================================
+                      // =========================================================
                       // HEURE
-                      // ==================================================
+                      // =========================================================
+
                       InkWell(
                         onTap: () async {
-                          final parties = heureController.text.split('H');
+                          final parties =
+                          heureController.text.split('H');
 
-                          final heureInitiale = parties.length == 2
+                          final heureInitiale =
+                          parties.length == 2
                               ? TimeOfDay(
-                            hour: int.tryParse(parties[0]) ?? 15,
-                            minute: int.tryParse(parties[1]) ?? 0,
+                            hour: int.tryParse(
+                                parties[0]) ??
+                                15,
+                            minute: int.tryParse(
+                                parties[1]) ??
+                                0,
                           )
-                              : const TimeOfDay(hour: 15, minute: 0);
+                              : const TimeOfDay(
+                            hour: 15,
+                            minute: 0,
+                          );
 
                           final heure = await showTimePicker(
                             context: context,
                             initialTime: heureInitiale,
-                            initialEntryMode: TimePickerEntryMode.dial,
+                            initialEntryMode:
+                            TimePickerEntryMode.dial,
                             cancelText: 'Annuler',
                             confirmText: 'Valider',
                             helpText: 'Sélectionner l’heure',
                             builder: (context, child) {
                               return MediaQuery(
-                                data: MediaQuery.of(
-                                  context,
-                                ).copyWith(alwaysUse24HourFormat: true),
+                                data: MediaQuery.of(context)
+                                    .copyWith(
+                                  alwaysUse24HourFormat: true,
+                                ),
                                 child: child!,
                               );
                             },
@@ -586,60 +602,95 @@ class _PlanningPageState extends State<PlanningPage> {
                         child: InputDecorator(
                           decoration: const InputDecoration(
                             labelText: 'Heure du match',
-                            prefixIcon: Icon(Icons.access_time),
+                            prefixIcon:
+                            Icon(Icons.access_time),
                           ),
                           child: Text(
                             heureMatch == null
-                                ? "Sélectionner une heure"
+                                ? 'Sélectionner une heure'
                                 : formatHeure(heureMatch!),
                           ),
                         ),
                       ),
-                     /* TextField(
-                        controller: heureController,
-
-                        keyboardType: TextInputType.datetime,
-
-                        decoration: const InputDecoration(
-                          labelText: 'Heure',
-                          hintText: '20:00',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),*/
 
                       const SizedBox(height: 16),
 
-                      // ==================================================
+                      // =========================================================
                       // TERRAIN
-                      // ==================================================
-                      DropdownButtonFormField<String>(
-                        initialValue: terrainSelectionne,
+                      // =========================================================
 
-                        decoration: const InputDecoration(
-                          labelText: 'Terrain',
-                          border: OutlineInputBorder(),
+                      if (match.estDomicile)
+
+                      // -------------------------------------------------------
+                      // MATCH À DOMICILE :
+                      // liste des terrains FCSSM
+                      // -------------------------------------------------------
+
+                        DropdownButtonFormField<String>(
+                          initialValue: terrainSelectionne,
+                          decoration: const InputDecoration(
+                            labelText: 'Terrain',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: terrains.map((terrain) {
+                            return DropdownMenuItem<String>(
+                              value: terrain.id,
+                              child: Text(terrain.nom),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              terrainSelectionne = value;
+                            });
+                          },
+                        )
+
+                      else
+
+                      // -------------------------------------------------------
+                      // MATCH À L'EXTÉRIEUR :
+                      // saisie libre du terrain
+                      // -------------------------------------------------------
+
+                        TextField(
+                          controller: stadeController,
+                          textCapitalization:
+                          TextCapitalization.sentences,
+                          decoration: const InputDecoration(
+                            labelText: 'Terrain',
+                            hintText: 'Nom du terrain',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.stadium),
+                          ),
                         ),
 
-                        items: terrains.map((terrain) {
-                          return DropdownMenuItem<String>(
-                            value: terrain.id,
-                            child: Text(terrain.nom),
-                          );
-                        }).toList(),
+                      const SizedBox(height: 16),
 
-                        onChanged: (value) {
-                          setDialogState(() {
-                            terrainSelectionne = value;
-                          });
-                        },
-                      ),
+                      // =========================================================
+                      // VILLE POUR MATCH EXTÉRIEUR
+                      // =========================================================
+
+                      if (!match.estDomicile)
+                        TextField(
+                          controller: villeController,
+                          textCapitalization:
+                          TextCapitalization.words,
+                          decoration: const InputDecoration(
+                            labelText: 'Ville',
+                            hintText: 'Ville du match',
+                            border: OutlineInputBorder(),
+                            prefixIcon:
+                            Icon(Icons.location_on),
+                          ),
+                        ),
                     ],
                   ),
                 ),
 
-                // ======================================================
+                // ===============================================================
                 // BOUTONS
-                // ======================================================
+                // ===============================================================
+
                 actions: [
                   TextButton(
                     onPressed: () {
@@ -662,84 +713,77 @@ class _PlanningPageState extends State<PlanningPage> {
         },
       );
 
-      // ============================================================
-      // ANNULATION / FERMETURE DE LA PAGE
-      // ============================================================
+      if (!mounted) return;
+      if (resultat != true) return;
 
-      if (!mounted) {
-        return;
-      }
-
-      if (resultat != true) {
-        return;
-      }
-
-      // ============================================================
-      // RECHERCHE DU TERRAIN CHOISI
-      // ============================================================
+      // =========================================================================
+      // RÉCUPÉRATION DU TERRAIN
+      // =========================================================================
 
       Terrain? terrainChoisi;
 
-      for (final terrain in terrains) {
-        if (terrain.id == terrainSelectionne) {
-          terrainChoisi = terrain;
-          break;
+      if (match.estDomicile) {
+        for (final terrain in terrains) {
+          if (terrain.id == terrainSelectionne) {
+            terrainChoisi = terrain;
+            break;
+          }
         }
       }
 
-      match.statut = statutSelectionne;
+      // =========================================================================
+      // MODIFICATION DU MATCH
+      // =========================================================================
 
-      // ============================================================
-      // NOUVELLE DATE AU FORMAT JJ/MM/AAAA
-      // ============================================================
+      match.statut = statutSelectionne;
 
       final nouvelleDate =
           '${dateSelectionnee.day.toString().padLeft(2, '0')}/'
           '${dateSelectionnee.month.toString().padLeft(2, '0')}/'
           '${dateSelectionnee.year.toString().padLeft(4, '0')}';
 
-      // ============================================================
-      // NOUVELLE HEURE
-      // ============================================================
-
-      //final nouvelleHeure = heureController.text.trim();
       final nouvelleHeure = heureMatch == null
           ? match.heureMatch
           : formatHeure(heureMatch!);
 
-      // ============================================================
-      // MISE À JOUR DU MATCH
-      // ============================================================
-
       setState(() {
         match.dateMatch = nouvelleDate;
-
         match.heureMatch = nouvelleHeure;
 
-        if (terrainChoisi != null) {
-          match.stade = terrainChoisi.nom;
-          match.ville = terrainChoisi.ville;
+        if (match.estDomicile) {
+          // ---------------------------------------------------------------
+          // MATCH À DOMICILE
+          // ---------------------------------------------------------------
+
+          if (terrainChoisi != null) {
+            match.stade = terrainChoisi.nom;
+            match.ville = terrainChoisi.ville;
+          }
+        } else {
+          // ---------------------------------------------------------------
+          // MATCH À L'EXTÉRIEUR
+          // ---------------------------------------------------------------
+
+          match.stade = stadeController.text.trim();
+          match.ville = villeController.text.trim();
         }
-        // on enregistrement une modification uniquement si le match est maintenu
-        if (statutSelectionne=='Match normal') {
+
+        // Conserve le comportement existant.
+        if (statutSelectionne == MatchFoot.statutNormal) {
           match.modification = initialData;
         }
       });
 
-      // ============================================================
-      // PUBLICATION SUR GITHUB
-      // ============================================================
+      // =========================================================================
+      // ENREGISTREMENT FIREBASE
+      // =========================================================================
 
       try {
-        await FirestoreService.modifierMatch(match: match);
+        await FirestoreService.modifierMatch(
+          match: match,
+        );
 
-        // ----------------------------------------------------------
-        // Vérification après publication
-        // ----------------------------------------------------------
-
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -748,27 +792,781 @@ class _PlanningPageState extends State<PlanningPage> {
           ),
         );
       } catch (e) {
-        // ----------------------------------------------------------
-        // Erreur publication
-        // ----------------------------------------------------------
-
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.red,
-            content: Text('Erreur lors de la publication : $e'),
+            content: Text(
+              'Erreur lors de la publication : $e',
+            ),
           ),
         );
       }
     } finally {
-      // ============================================================
-      // LIBÉRATION DU CONTRÔLEUR
-      // ============================================================
-
       heureController.dispose();
+      stadeController.dispose();
+      villeController.dispose();
+    }
+  }*/
+  Future<void> _modifierMatch(MatchFoot match) async {
+    // ===========================================================================
+    // DONNÉES INITIALES
+    // ===========================================================================
+
+    final initialData =
+        '📅 ${match.dateMatch}\n'
+        '🕐 ${match.heureMatch}\n'
+        '📍 ${match.stade} - ${match.ville}';
+
+    String statutSelectionne =
+        match.statut ?? MatchFoot.statutNormal;
+
+    // Type de modification :
+    // - modification = modification classique
+    // - inversion = inversion du match
+    String typeModification = 'modification';
+
+    final parties = match.heureMatch.split('H');
+
+    TimeOfDay? heureMatch;
+
+    if (parties.length == 2) {
+      heureMatch = TimeOfDay(
+        hour: int.tryParse(parties[0]) ?? 15,
+        minute: int.tryParse(parties[1]) ?? 0,
+      );
+    }
+
+    final heureController =
+    TextEditingController(text: match.heureMatch);
+
+    // ===========================================================================
+    // CHAMPS TERRAIN / VILLE
+    // ===========================================================================
+
+    final stadeController =
+    TextEditingController(text: match.stade);
+
+    final villeController =
+    TextEditingController(text: match.ville);
+
+    // Pour une inversion domicile -> extérieur, on prépare
+    // des champs vides pour la nouvelle destination.
+    if (!match.estDomicile) {
+      // Match extérieur actuellement :
+      // les champs seront utilisés seulement si nécessaire.
+    }
+
+    try {
+      DateTime dateSelectionnee =
+      _parseDateFrancaise(match.dateMatch);
+
+      // =========================================================================
+      // CHARGEMENT DES TERRAINS FCSSM
+      // =========================================================================
+
+      final terrains =
+      await TerrainService.chargerTerrains();
+
+      if (!mounted) return;
+
+      // Terrain actuellement sélectionné pour un match à domicile.
+      String? terrainSelectionne;
+
+      for (final terrain in terrains) {
+        if (terrain.nom == match.stade) {
+          terrainSelectionne = terrain.id;
+          break;
+        }
+      }
+
+      // =========================================================================
+      // DIALOGUE
+      // =========================================================================
+
+      final resultat = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          String? erreurLieu;
+
+          return StatefulBuilder(
+            builder: (dialogContext, setDialogState) {
+              // -----------------------------------------------------------------
+              // Détermine si, après l'opération, le match sera à domicile.
+              // -----------------------------------------------------------------
+
+              final bool inversion =
+                  typeModification == 'inversion';
+
+              final bool seraADomicile = inversion
+                  ? !match.estDomicile
+                  : match.estDomicile;
+
+              // -----------------------------------------------------------------
+              // Lorsqu'on passe en inversion, on prépare les champs de destination
+              // -----------------------------------------------------------------
+
+              void initialiserInversion() {
+                if (!inversion) return;
+
+                erreurLieu = null;
+
+                if (match.estDomicile) {
+                  // -------------------------------------------------------------
+                  // DOMICILE -> EXTÉRIEUR
+                  // -------------------------------------------------------------
+                  //
+                  // Le terrain et la ville doivent être saisis librement.
+                  //
+                  stadeController.clear();
+                  villeController.clear();
+                  terrainSelectionne = null;
+                } else {
+                  // -------------------------------------------------------------
+                  // EXTÉRIEUR -> DOMICILE
+                  // -------------------------------------------------------------
+                  //
+                  // Le terrain FCSSM sera sélectionné dans la liste.
+                  //
+                  terrainSelectionne = null;
+                  stadeController.clear();
+                  villeController.clear();
+                }
+              }
+
+              return AlertDialog(
+                title: Text(
+                  inversion
+                      ? 'Inversion du match'
+                      : 'Modifier le match',
+                ),
+
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+
+                      // ===========================================================
+                      // TYPE DE MODIFICATION
+                      // ===========================================================
+
+                      DropdownButtonFormField<String>(
+                        initialValue: typeModification,
+                        decoration: const InputDecoration(
+                          labelText: 'Type de modification',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'modification',
+                            child: Text('Modification du match'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'inversion',
+                            child: Text('Inversion du match'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+
+                          setDialogState(() {
+                            typeModification = value;
+
+                            if (value == 'inversion') {
+                              initialiserInversion();
+                            } else {
+                              // Retour à la modification normale :
+                              erreurLieu = null;
+
+                              // On remet les valeurs actuelles.
+                              stadeController.text = match.stade;
+                              villeController.text = match.ville;
+
+                              for (final terrain in terrains) {
+                                if (terrain.nom == match.stade) {
+                                  terrainSelectionne = terrain.id;
+                                  break;
+                                }
+                              }
+                            }
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // ===========================================================
+                      // STATUT
+                      // ===========================================================
+
+                      DropdownButtonFormField<String>(
+                        initialValue: statutSelectionne,
+                        decoration: const InputDecoration(
+                          labelText: 'Statut du match',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: MatchFoot.statutNormal,
+                            child: Text('Match normal'),
+                          ),
+                          DropdownMenuItem(
+                            value: MatchFoot.statutReporte,
+                            child: Text('Match reporté'),
+                          ),
+                          DropdownMenuItem(
+                            value: MatchFoot.statutForfaitFc,
+                            child: Text('Forfait FCSSM'),
+                          ),
+                          DropdownMenuItem(
+                            value: MatchFoot.statutForfaitAdverse,
+                            child: Text('Forfait adverse'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+
+                          setDialogState(() {
+                            statutSelectionne = value;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // ===========================================================
+                      // INFORMATION SUR L'INVERSION
+                      // ===========================================================
+
+                      if (inversion)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.amber.shade300,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.swap_horiz,
+                                color: Colors.orange,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  match.estDomicile
+                                      ? 'Le match sera inversé : '
+                                      'domicile → extérieur.'
+                                      : 'Le match sera inversé : '
+                                      'extérieur → domicile.',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      if (inversion)
+                        const SizedBox(height: 16),
+
+                      // ===========================================================
+                      // DATE
+                      // ===========================================================
+
+                      InkWell(
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: dialogContext,
+                            initialDate: dateSelectionnee,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                            locale: const Locale('fr', 'FR'),
+                          );
+
+                          if (date != null) {
+                            setDialogState(() {
+                              dateSelectionnee = date;
+                            });
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Date',
+                            border: OutlineInputBorder(),
+                            suffixIcon:
+                            Icon(Icons.calendar_month),
+                          ),
+                          child: Text(
+                            '${dateSelectionnee.day.toString().padLeft(2, '0')}/'
+                                '${dateSelectionnee.month.toString().padLeft(2, '0')}/'
+                                '${dateSelectionnee.year}',
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // ===========================================================
+                      // HEURE
+                      // ===========================================================
+
+                      InkWell(
+                        onTap: () async {
+                          final parties =
+                          heureController.text.split('H');
+
+                          final heureInitiale =
+                          parties.length == 2
+                              ? TimeOfDay(
+                            hour: int.tryParse(
+                                parties[0]) ??
+                                15,
+                            minute: int.tryParse(
+                                parties[1]) ??
+                                0,
+                          )
+                              : const TimeOfDay(
+                            hour: 15,
+                            minute: 0,
+                          );
+
+                          final heure = await showTimePicker(
+                            context: context,
+                            initialTime: heureInitiale,
+                            initialEntryMode:
+                            TimePickerEntryMode.dial,
+                            cancelText: 'Annuler',
+                            confirmText: 'Valider',
+                            helpText: 'Sélectionner l’heure',
+                            builder: (context, child) {
+                              return MediaQuery(
+                                data: MediaQuery.of(context)
+                                    .copyWith(
+                                  alwaysUse24HourFormat: true,
+                                ),
+                                child: child!,
+                              );
+                            },
+                          );
+
+                          if (heure != null) {
+                            setDialogState(() {
+                              heureMatch = heure;
+                              heureController.text =
+                                  formatHeure(heure);
+                            });
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            labelText: inversion
+                                ? 'Nouvelle heure du match'
+                                : 'Heure du match',
+                            border: const OutlineInputBorder(),
+                            prefixIcon:
+                            const Icon(Icons.access_time),
+                          ),
+                          child: Text(
+                            heureMatch == null
+                                ? 'Sélectionner une heure'
+                                : formatHeure(heureMatch!),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // ===========================================================
+                      // TERRAIN
+                      // ===========================================================
+
+                      if (seraADomicile)
+
+                      // ---------------------------------------------------------
+                      // DOMICILE :
+                      // terrain FCSSM
+                      // ---------------------------------------------------------
+
+                        DropdownButtonFormField<String>(
+                          initialValue: terrainSelectionne,
+                          decoration: InputDecoration(
+                            labelText: inversion
+                                ? 'Nouveau terrain'
+                                : 'Terrain',
+                            border:
+                            const OutlineInputBorder(),
+                          ),
+                          items: terrains.map((terrain) {
+                            return DropdownMenuItem<String>(
+                              value: terrain.id,
+                              child: Text(terrain.nom),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              terrainSelectionne = value;
+                              erreurLieu = null;
+                            });
+                          },
+                        )
+
+                      else
+
+                      // ---------------------------------------------------------
+                      // EXTÉRIEUR :
+                      // saisie libre
+                      // ---------------------------------------------------------
+
+                        TextField(
+                          controller: stadeController,
+                          textCapitalization:
+                          TextCapitalization.sentences,
+                          decoration: InputDecoration(
+                            labelText: inversion
+                                ? 'Nouveau terrain'
+                                : 'Terrain',
+                            hintText: 'Nom du terrain',
+                            border:
+                            const OutlineInputBorder(),
+                            prefixIcon:
+                            const Icon(Icons.stadium),
+                            errorText: erreurLieu,
+                          ),
+                        ),
+
+                      // ===========================================================
+                      // VILLE
+                      // ===========================================================
+
+                      if (!seraADomicile) ...[
+                        const SizedBox(height: 16),
+
+                        TextField(
+                          controller: villeController,
+                          textCapitalization:
+                          TextCapitalization.words,
+                          decoration: InputDecoration(
+                            labelText: inversion
+                                ? 'Nouvelle ville'
+                                : 'Ville',
+                            hintText: 'Ville du match',
+                            border:
+                            const OutlineInputBorder(),
+                            prefixIcon:
+                            const Icon(Icons.location_on),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // ===============================================================
+                // BOUTONS
+                // ===============================================================
+
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop(false);
+                    },
+                    child: const Text('Annuler'),
+                  ),
+
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // ---------------------------------------------------------
+                      // Validation du lieu
+                      // ---------------------------------------------------------
+
+                      if (seraADomicile) {
+                        if (terrainSelectionne == null) {
+                          setDialogState(() {
+                            erreurLieu =
+                            'Sélectionnez un terrain.';
+                          });
+                          return;
+                        }
+                      } else {
+                        if (stadeController.text.trim().isEmpty) {
+                          setDialogState(() {
+                            erreurLieu =
+                            'Saisissez le terrain.';
+                          });
+                          return;
+                        }
+
+                        if (villeController.text.trim().isEmpty) {
+                          setDialogState(() {
+                            erreurLieu =
+                            'Saisissez la ville.';
+                          });
+                          return;
+                        }
+                      }
+
+                      Navigator.of(dialogContext).pop(true);
+                    },
+                    icon: Icon(
+                      inversion
+                          ? Icons.swap_horiz
+                          : Icons.save,
+                    ),
+                    label: Text(
+                      inversion
+                          ? 'Inverser le match'
+                          : 'Enregistrer',
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+
+      if (!mounted) return;
+      if (resultat != true) return;
+
+      // =========================================================================
+      // CAS 1 : INVERSION DU MATCH
+      // =========================================================================
+
+      if (typeModification == 'inversion') {
+        Terrain? terrainChoisi;
+
+        // -----------------------------------------------------------------------
+        // On recherche le terrain uniquement si le nouveau match est à domicile.
+        // -----------------------------------------------------------------------
+
+        if (!match.estDomicile) {
+          for (final terrain in terrains) {
+            if (terrain.id == terrainSelectionne) {
+              terrainChoisi = terrain;
+              break;
+            }
+          }
+        }
+
+        // -----------------------------------------------------------------------
+        // Vérification
+        // -----------------------------------------------------------------------
+
+        if (!match.estDomicile && terrainChoisi == null) {
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Colors.red,
+              content: Text(
+                'Aucun terrain n’a été sélectionné.',
+              ),
+            ),
+          );
+
+          return;
+        }
+
+        // -----------------------------------------------------------------------
+        // Sauvegarde de l'ancien état
+        // -----------------------------------------------------------------------
+
+        final ancienRecevant =
+        match.estDomicile ? 'domicile' : 'extérieur';
+
+        final ancienStade = match.stade;
+        final ancienneVille = match.ville;
+        final ancienneHeure = match.heureMatch;
+
+        // -----------------------------------------------------------------------
+        // Nouvelle heure
+        // -----------------------------------------------------------------------
+
+        final nouvelleHeure = heureMatch == null
+            ? match.heureMatch
+            : formatHeure(heureMatch!);
+
+        // -----------------------------------------------------------------------
+        // Nouveau lieu
+        // -----------------------------------------------------------------------
+
+        String nouveauStade;
+        String nouvelleVille;
+
+        if (match.estDomicile) {
+          // =============================================================
+          // DOMICILE -> EXTÉRIEUR
+          // =============================================================
+
+          nouveauStade = stadeController.text.trim();
+          nouvelleVille = villeController.text.trim();
+        } else {
+          // =============================================================
+          // EXTÉRIEUR -> DOMICILE
+          // =============================================================
+
+          nouveauStade = terrainChoisi!.nom;
+          nouvelleVille = terrainChoisi.ville;
+        }
+
+        // -----------------------------------------------------------------------
+        // Modification descriptive
+        // -----------------------------------------------------------------------
+
+        final modificationInversion =
+            'Inversion du match :\n'
+            'Ancien :\n'
+            '🏠 ${ancienRecevant == 'domicile' ? 'Domicile' : 'Extérieur'}\n'
+            '🕐 $ancienneHeure\n'
+            '📍 $ancienStade - $ancienneVille\n\n'
+            'Nouveau :\n'
+            '🏠 ${match.estDomicile ? 'Extérieur' : 'Domicile'}\n'
+            '🕐 $nouvelleHeure\n'
+            '📍 $nouveauStade - $nouvelleVille';
+
+        // -----------------------------------------------------------------------
+        // Application des modifications
+        // -----------------------------------------------------------------------
+
+        setState(() {
+          // Inversion domicile / extérieur.
+          match.recevant =
+          match.estDomicile ? 'non' : 'oui';
+
+          match.heureMatch = nouvelleHeure;
+
+          match.stade = nouveauStade;
+          match.ville = nouvelleVille;
+
+          match.modification = modificationInversion;
+
+          // On conserve le statut actuel.
+          match.statut = statutSelectionne;
+        });
+      }
+
+      // =========================================================================
+      // CAS 2 : MODIFICATION NORMALE
+      // =========================================================================
+
+      else {
+        Terrain? terrainChoisi;
+
+        if (match.estDomicile) {
+          for (final terrain in terrains) {
+            if (terrain.id == terrainSelectionne) {
+              terrainChoisi = terrain;
+              break;
+            }
+          }
+        }
+
+        // -----------------------------------------------------------------------
+        // Statut
+        // -----------------------------------------------------------------------
+
+        match.statut = statutSelectionne;
+
+        // -----------------------------------------------------------------------
+        // Date
+        // -----------------------------------------------------------------------
+
+        final nouvelleDate =
+            '${dateSelectionnee.day.toString().padLeft(2, '0')}/'
+            '${dateSelectionnee.month.toString().padLeft(2, '0')}/'
+            '${dateSelectionnee.year.toString().padLeft(4, '0')}';
+
+        // -----------------------------------------------------------------------
+        // Heure
+        // -----------------------------------------------------------------------
+
+        final nouvelleHeure = heureMatch == null
+            ? match.heureMatch
+            : formatHeure(heureMatch!);
+
+        // -----------------------------------------------------------------------
+        // Application
+        // -----------------------------------------------------------------------
+
+        setState(() {
+          match.dateMatch = nouvelleDate;
+          match.heureMatch = nouvelleHeure;
+
+          if (match.estDomicile) {
+            // ---------------------------------------------------------------
+            // MATCH À DOMICILE
+            // ---------------------------------------------------------------
+
+            if (terrainChoisi != null) {
+              match.stade = terrainChoisi.nom;
+              match.ville = terrainChoisi.ville;
+            }
+          } else {
+            // ---------------------------------------------------------------
+            // MATCH À L'EXTÉRIEUR
+            // ---------------------------------------------------------------
+
+            match.stade = stadeController.text.trim();
+            match.ville = villeController.text.trim();
+          }
+
+          // ---------------------------------------------------------------
+          // Historique existant
+          // ---------------------------------------------------------------
+
+          if (statutSelectionne == MatchFoot.statutNormal) {
+            match.modification = initialData;
+          }
+        });
+      }
+
+      // =========================================================================
+      // ENREGISTREMENT FIRESTORE
+      // =========================================================================
+
+      try {
+        await FirestoreService.modifierMatch(
+          match: match,
+        );
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.green,
+            content: Text(
+              typeModification == 'inversion'
+                  ? 'Match inversé.'
+                  : 'Match modifié.',
+            ),
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(
+              'Erreur lors de la publication : $e',
+            ),
+          ),
+        );
+      }
+    } finally {
+      heureController.dispose();
+      stadeController.dispose();
+      villeController.dispose();
     }
   }
 
@@ -2225,7 +3023,8 @@ class _PlanningPageState extends State<PlanningPage> {
 
       ),
 
-      body: PageView(
+      body: SafeArea(
+        child: PageView(
         controller: _semainePageController,
 
         // ---------------------------------------------------------
@@ -2250,6 +3049,7 @@ class _PlanningPageState extends State<PlanningPage> {
           // =======================================================
           _buildListeMatchs(),
         ],
+      ),
       ),
     );
   }
