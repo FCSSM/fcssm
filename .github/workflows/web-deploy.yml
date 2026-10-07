@@ -31,7 +31,9 @@ jobs:
         run: flutter analyze
 
       - name: Construire l'application Web
-        run: flutter build web --release --base-href /fcssm/
+        # Ancienne configuration pour https://fcssm.github.io/fcssm/
+        # run: flutter build web --release --base-href /fcssm/
+        run: flutter build web --release --base-href /
 
       - name: Copier la politique de confidentialité
         run: cp privacy-policy.html build/web/privacy-policy.html
